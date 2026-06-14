@@ -1,57 +1,116 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') - Queue Dashboard</title>
+    <title>@yield('title', 'Antrian Order') - Queue Dashboard</title>
 
+    <!-- SB Admin 2 Stylesheets -->
     <link href="{{ asset('sbadmin2/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,300,400,600,700,800,900" rel="stylesheet">
     <link href="{{ asset('sbadmin2/css/sb-admin-2.min.css') }}" rel="stylesheet">
+    
+    <!-- Custom CSS for Premium Experience -->
+    <link rel="stylesheet" href="{{ asset('css/custom-dashboard.css') }}">
+
     @stack('styles')
 </head>
 <body id="page-top">
     <div id="wrapper">
+        
+        <!-- SIDEBAR SB ADMIN 2 -->
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ route('dashboard') }}">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url('/dashboard') }}">
                 <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-layer-group"></i>
+                    <i class="fas fa-headset"></i>
                 </div>
-                <div class="sidebar-brand-text mx-3">Queue Dashboard</div>
+                <div class="sidebar-brand-text mx-3">CC Queue</div>
             </a>
 
             <hr class="sidebar-divider my-0">
 
-            <li class="nav-item active">
-                <a class="nav-link" href="{{ route('dashboard') }}">
-                    <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
+            <!-- Menu 1: Antrian Order (Untuk CC & ADMIN) -->
+            <li class="nav-item {{ Request::is('dashboard') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ url('/dashboard') }}">
+                    <i class="fas fa-fw fa-list-ol"></i>
+                    <span>Antrian Order</span>
                 </a>
             </li>
 
+            <!-- Menu Admin (Hanya untuk ADMIN) -->
+            @if(auth()->user()->isAdmin())
+                <hr class="sidebar-divider">
+                <div class="sidebar-heading">
+                    Manajemen Admin
+                </div>
+
+                <!-- Menu 2: Kelola User CC -->
+                <li class="nav-item {{ Request::is('admin/users*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ url('/admin/users') }}">
+                        <i class="fas fa-fw fa-users"></i>
+                        <span>Kelola User</span>
+                    </a>
+                </li>
+
+                <!-- Menu 3: Kelola Tipe Order -->
+                <li class="nav-item {{ Request::is('admin/order-types*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ url('/admin/order-types') }}">
+                        <i class="fas fa-fw fa-tags"></i>
+                        <span>Kelola Tipe Order</span>
+                    </a>
+                </li>
+            @endif
+
             <hr class="sidebar-divider d-none d-md-block">
+
+            <!-- Sidebar Toggler -->
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
         </ul>
+        <!-- END OF SIDEBAR -->
 
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
-                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                
+                <!-- TOPBAR NAVBAR -->
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow" style="height: 60px;">
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                         <i class="fa fa-bars"></i>
                     </button>
 
-                    <ul class="navbar-nav ml-auto">
+                    <ul class="navbar-nav ml-auto align-items-center">
+                        
+                        <!-- Connection Status Dot (Section 9.1 & 9.2 PRD) -->
+                        <li class="nav-item mx-2 d-flex align-items-center">
+                            <span id="connection-status-dot" class="online-indicator-dot pulse-green mr-2" title="Koneksi aktif"></span>
+                            <span class="fs-8 text-secondary d-none d-sm-inline" id="connection-status-text">Online</span>
+                        </li>
+
+                        <div class="topbar-divider d-none d-sm-block"></div>
+
+                        <!-- User Profile Dropdown -->
                         <li class="nav-item dropdown no-arrow">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown">
-                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ auth()->user()->name }}</span>
-                                <span class="img-profile rounded-circle bg-primary d-inline-flex align-items-center justify-content-center text-white">
-                                    <i class="fas fa-user"></i>
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <div class="d-flex flex-column align-items-end text-right mr-2">
+                                    <span class="text-gray-600 small font-weight-bold">{{ auth()->user()->name }}</span>
+                                    <span class="text-gray-500 font-weight-normal" style="font-size: 10px; text-transform: uppercase;">{{ auth()->user()->role }}</span>
+                                </div>
+                                <span class="img-profile rounded-circle bg-primary d-inline-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px; font-weight: 700;">
+                                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                 </span>
                             </a>
+                            
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="{{ url('/change-password') }}">
+                                    <i class="fas fa-key fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Ganti Password
+                                </a>
+                                <div class="dropdown-divider"></div>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
-                                    <button type="submit" class="dropdown-item">
+                                    <button type="submit" class="dropdown-item text-danger">
                                         <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
                                         Logout
                                     </button>
@@ -60,30 +119,41 @@
                         </li>
                     </ul>
                 </nav>
+                <!-- END OF TOPBAR -->
 
+                <!-- CONTENT AREA -->
                 <div class="container-fluid">
                     @yield('content')
                 </div>
+                
             </div>
 
-            <footer class="sticky-footer bg-white">
+            <footer class="sticky-footer bg-white py-3">
                 <div class="container my-auto">
                     <div class="copyright text-center my-auto">
-                        <span>Queue Dashboard</span>
+                        <span>Queue Dashboard &copy; 2026</span>
                     </div>
                 </div>
             </footer>
         </div>
     </div>
 
+    <!-- Scroll to Top Button-->
     <a class="scroll-to-top rounded" href="#page-top">
         <i class="fas fa-angle-up"></i>
     </a>
 
+    <!-- SB Admin 2 Vendor Scripts -->
     <script src="{{ asset('sbadmin2/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('sbadmin2/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('sbadmin2/vendor/jquery-easing/jquery.easing.min.js') }}"></script>
     <script src="{{ asset('sbadmin2/js/sb-admin-2.min.js') }}"></script>
+    
+    <!-- Custom Modular JS for Queue Animations & Realtime Polling -->
+    <script src="{{ asset('js/toast.js') }}"></script>
+    <script src="{{ asset('js/polling.js') }}"></script>
+    <script src="{{ asset('js/queue-animation.js') }}"></script>
+    
     @stack('scripts')
 </body>
 </html>

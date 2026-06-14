@@ -1,0 +1,191 @@
+/* Global Styles & Variables */
+:root {
+  --primary: #2563EB;
+  --primary-light: #EFF6FF;
+  --primary-glow: rgba(37,99,235,0.15);
+  --success: #10B981;
+  --success-light: #ECFDF5;
+  --warning: #F59E0B;
+  --warning-light: #FFFBEB;
+  --danger: #EF4444;
+  --danger-light: #FEF2F2;
+  --surface: #F8FAFC;
+  --card: #FFFFFF;
+  --border: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+}
+
+/* Typography & Sizing */
+.fs-7 { font-size: 0.875rem !important; }
+.fs-8 { font-size: 0.75rem !important; }
+.tracking-tight { letter-spacing: -0.025em; }
+
+/* Status Dot Indicator */
+.online-indicator-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: #10b981;
+    border-radius: 50%;
+    animation: pulse-dot-green 2s infinite;
+}
+.offline-indicator-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: #94a3b8;
+    border-radius: 50%;
+}
+
+@keyframes pulse-dot-green {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Pulse Highlight for FLIP movement */
+.queue-item.first-highlight {
+  animation: firstPulse 600ms ease forwards;
+}
+@keyframes firstPulse {
+  0%   { box-shadow: 0 0 0 0px rgba(37,99,235,0.4); }
+  50%  { box-shadow: 0 0 0 8px rgba(37,99,235,0.2); }
+  100% { box-shadow: 0 0 0 0px rgba(37,99,235,0); }
+}
+
+/* Stagger & enters animations */
+.queue-item.entering {
+  animation: slideInUp 300ms cubic-bezier(0.0, 0.0, 0.2, 1) forwards;
+}
+@keyframes slideInUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Custom Badges */
+.badge-pill-custom {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-primary-custom {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+.badge-success-custom {
+  background-color: var(--success-light);
+  color: var(--success);
+}
+.badge-warning-custom {
+  background-color: var(--warning-light);
+  color: var(--warning);
+}
+.badge-danger-custom {
+  background-color: var(--danger-light);
+  color: var(--danger);
+}
+
+/* Custom Cards */
+.queue-item.next-turn {
+  background-color: var(--primary-light) !important;
+  border-left: 4px solid var(--primary) !important;
+  box-shadow: 0 4px 15px -3px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Shimmer Loading */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f3f6 25%, #e1e6eb 50%, #f0f3f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Custom Toggle Card for Order Types */
+.custom-toggle-card {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+.custom-toggle-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+.custom-toggle-card.selected {
+  border-color: var(--primary) !important;
+  background-color: var(--primary-light) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow) !important;
+}
+.custom-toggle-card.disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Toast animations */
+.toast-slide-in {
+  animation: slideInRight 0.25s ease forwards;
+}
+.toast-slide-out {
+  animation: slideOutRight 0.2s ease forwards;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(110%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(110%); opacity: 0; }
+}
+
+/* Live Feed Log details */
+.activity-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-left: 20px;
+  border-left: 2px solid var(--border);
+  margin-left: 10px;
+}
+
+.activity-feed-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.activity-feed-dot {
+  position: absolute;
+  left: -26px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background-color: var(--text-muted);
+  box-shadow: 0 0 0 2px var(--border);
+}
+
+.activity-feed-dot.action-accept {
+  background-color: var(--success);
+  box-shadow: 0 0 0 2px var(--success-light);
+}
+
+.activity-feed-dot.action-void {
+  background-color: var(--danger);
+  box-shadow: 0 0 0 2px var(--danger-light);
+}
+
+.activity-feed-dot.action-login {
+  background-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
