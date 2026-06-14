@@ -31,6 +31,7 @@ class QueueService
                 'name' => optional($position->user)->name,
                 'queue_number' => $position->queue_number,
                 'status' => $position->status,
+                'is_logged_in' => $position->user ? $position->user->isOnline() : false,
             ];
         })->toArray();
     }
@@ -54,6 +55,15 @@ class QueueService
             $orderedUserIds = $queue->pluck('user_id')->toArray();
             array_shift($orderedUserIds);
             $orderedUserIds[] = $firstPosition->user_id;
+
+            // Shift queue numbers using temporary offset to prevent unique constraint violation
+            foreach ($orderedUserIds as $index => $userId) {
+                $position = $queue->firstWhere('user_id', $userId);
+                if ($position) {
+                    $position->queue_number = ($index + 1) + 1000;
+                    $position->save();
+                }
+            }
 
             foreach ($orderedUserIds as $index => $userId) {
                 $position = $queue->firstWhere('user_id', $userId);
@@ -142,9 +152,9 @@ class QueueService
             ->get();
 
         $stats = [
-            'WA' => 0,
-            'CALL' => 0,
-            'LIVE' => 0,
+            'CRM' => 0,
+            'CMS' => 0,
+            'OTHER' => 0,
             'TOTAL' => $todayOrders->count(),
         ];
 
@@ -161,8 +171,9 @@ class QueueService
                 'user_id' => optional($firstPosition)->user_id,
                 'username' => optional($firstPosition->user)->username,
                 'name' => optional($firstPosition->user)->name,
-'status' => optional($firstPosition)->status,
-                'last_accepted_at' => optional($firstPosition->updated_at)->toDateTimeString(),
+                'status' => optional($firstPosition)->status,
+                'last_accepted_at' => $firstPosition && $firstPosition->updated_at ? $firstPosition->updated_at->toDateTimeString() : null,
+                'is_logged_in' => $firstPosition && $firstPosition->user ? $firstPosition->user->isOnline() : false,
             ],
             'last_order' => $lastOrder ? [
                 'id' => $lastOrder->id,
@@ -207,6 +218,15 @@ class QueueService
             ->get()
             ->keyBy('user_id');
 
+        // Restore using temporary offsets to avoid unique constraint violations
+        foreach ($snapshot as $item) {
+            $position = $positions->get($item['user_id']);
+            if ($position) {
+                $position->queue_number = $item['queue_number'] + 1000;
+                $position->save();
+            }
+        }
+
         foreach ($snapshot as $item) {
             $position = $positions->get($item['user_id']);
             if ($position) {
@@ -214,5 +234,54 @@ class QueueService
                 $position->save();
             }
         }
+    }
+
+    public function syncQueueForUser(User $user, bool $isDeleted = false): void
+    {
+        DB::transaction(function () use ($user, $isDeleted) {
+            if ($isDeleted) {
+                $remaining = QueuePosition::active()->orderBy('queue_number')->get();
+                
+                foreach ($remaining as $index => $pos) {
+                    $pos->queue_number = ($index + 1) + 1000;
+                    $pos->save();
+                }
+                
+                foreach ($remaining as $index => $pos) {
+                    $pos->queue_number = $index + 1;
+                    $pos->save();
+                }
+                return;
+            }
+
+            if ($user->role === 'CC' && $user->isActive()) {
+                $exists = QueuePosition::active()->where('user_id', $user->id)->exists();
+                if (!$exists) {
+                    $maxNumber = QueuePosition::active()->max('queue_number') ?? 0;
+                    QueuePosition::create([
+                        'user_id' => $user->id,
+                        'queue_number' => $maxNumber + 1,
+                        'status' => 'ACTIVE',
+                    ]);
+                }
+            } else {
+                $position = QueuePosition::active()->where('user_id', $user->id)->first();
+                if ($position) {
+                    $position->delete();
+
+                    $remaining = QueuePosition::active()->orderBy('queue_number')->get();
+                    
+                    foreach ($remaining as $index => $pos) {
+                        $pos->queue_number = ($index + 1) + 1000;
+                        $pos->save();
+                    }
+                    
+                    foreach ($remaining as $index => $pos) {
+                        $pos->queue_number = $index + 1;
+                        $pos->save();
+                    }
+                }
+            }
+        });
     }
 }

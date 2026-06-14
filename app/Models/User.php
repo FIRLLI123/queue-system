@@ -23,6 +23,7 @@ class User extends Authenticatable
         'username',
         'role',
         'status',
+        'last_seen_at',
     ];
 
     /**
@@ -44,6 +45,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'last_seen_at' => 'datetime',
     ];
 
     public function queuePosition()
@@ -74,6 +76,15 @@ class User extends Authenticatable
     public function isCC(): bool
     {
         return $this->role === 'CC';
+    }
+
+    public function isOnline(): bool
+    {
+        if (!$this->last_seen_at) {
+            return false;
+        }
+
+        return $this->last_seen_at->gt(now()->subSeconds(15));
     }
 
     public function setPasswordAttribute($value)
