@@ -29,4 +29,15 @@ class WebDashboardController extends Controller
         $data = $this->queueService->getDashboardData($request->user());
         return response()->json($data);
     }
+
+    public function adminScreen()
+    {
+        return view('admin.screen');
+    }
+
+    public function getAdminScreenData()
+    {
+        $data = $this->queueService->getScreenData();
+        return response()->json($data);
+    }
 }

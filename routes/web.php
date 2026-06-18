@@ -6,6 +6,7 @@ use App\Http\Controllers\WebDashboardController;
 use App\Http\Controllers\WebOrderController;
 use App\Http\Controllers\WebOrderTypeController;
 use App\Http\Controllers\WebUserController;
+use App\Http\Controllers\WebChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,6 +38,10 @@ Route::middleware('auth')->group(function () {
     
     // Get active order types for accept form
     Route::get('/order-types', [WebOrderTypeController::class, 'indexActive']);
+
+    // Chat routes
+    Route::post('/chats/send', [WebChatController::class, 'send']);
+    Route::post('/chats/read', [WebChatController::class, 'markAsRead']);
 });
 
 // CC Only Actions
@@ -54,6 +59,7 @@ Route::middleware(['auth', 'role:ADMIN'])->group(function () {
     Route::get('/admin/users/{id}', [WebUserController::class, 'show']);
     Route::put('/admin/users/{id}', [WebUserController::class, 'update']);
     Route::delete('/admin/users/{id}', [WebUserController::class, 'destroy']);
+    Route::post('/admin/queue/reorder', [WebUserController::class, 'reorderQueue'])->name('admin.queue.reorder');
 
     // Order Types CRUD
     Route::get('/admin/order-types', [WebOrderTypeController::class, 'index'])->name('admin.order-types');
@@ -62,4 +68,8 @@ Route::middleware(['auth', 'role:ADMIN'])->group(function () {
     Route::get('/admin/order-types/{id}', [WebOrderTypeController::class, 'show']);
     Route::put('/admin/order-types/{id}', [WebOrderTypeController::class, 'update']);
     Route::delete('/admin/order-types/{id}', [WebOrderTypeController::class, 'destroy']);
+
+    // Screen Monitoring
+    Route::get('/admin/screen', [WebDashboardController::class, 'adminScreen'])->name('admin.screen');
+    Route::get('/admin/screen/data', [WebDashboardController::class, 'getAdminScreenData']);
 });

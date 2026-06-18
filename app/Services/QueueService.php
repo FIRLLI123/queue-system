@@ -165,6 +165,55 @@ class QueueService
             }
         }
 
+        $chats = \App\Models\Chat::where(function($q) use ($user) {
+                $q->where('sender_id', $user->id)
+                  ->orWhere('receiver_id', $user->id);
+            })
+            ->with('sender')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($chat) {
+                return [
+                    'id' => $chat->id,
+                    'sender_id' => $chat->sender_id,
+                    'sender_username' => optional($chat->sender)->username,
+                    'sender_name' => optional($chat->sender)->name,
+                    'receiver_id' => $chat->receiver_id,
+                    'message' => $chat->message,
+                    'is_read' => $chat->is_read,
+                    'time' => $chat->created_at->format('H:i'),
+                ];
+            })->toArray();
+
+        $chatUsers = \App\Models\User::where('status', 'ACTIVE')
+            ->where('id', '!=', $user->id)
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'username' => $u->username,
+                    'name' => $u->name,
+                    'role' => $u->role,
+                    'is_online' => $u->isOnline(),
+                ];
+            })->toArray();
+
+        $todayOrdersList = Order::with(['orderType', 'user'])
+            ->whereDate('created_at', now()->toDateString())
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'username' => optional($order->user)->username,
+                    'type' => optional($order->orderType)->name,
+                    'status' => $order->status,
+                    'void_reason' => $order->void_reason,
+                    'created_at' => $order->created_at->toDateTimeString(),
+                ];
+            })->toArray();
+
         return [
             'queue' => $queuePayload,
             'current_turn' => [
@@ -184,8 +233,11 @@ class QueueService
                 'void_reason' => $lastOrder->void_reason,
                 'created_at' => $lastOrder->created_at->toDateTimeString(),
             ] : null,
+            'today_orders' => $todayOrdersList,
             'statistics' => $stats,
             'activities' => $activities,
+            'chats' => $chats,
+            'chat_users' => $chatUsers,
             'can_accept' => $firstPosition && $firstPosition->user_id === $user->id && $user->isActive(),
             'can_void' => $this->canVoidLastOrder($user),
         ];
@@ -283,5 +335,84 @@ class QueueService
                 }
             }
         });
+    }
+
+    public function reorderQueue(array $orderedUserIds): void
+    {
+        DB::transaction(function () use ($orderedUserIds) {
+            $positions = QueuePosition::active()->orderBy('queue_number')->get();
+            $existingUserIds = $positions->pluck('user_id')->toArray();
+            
+            // Filter orderedUserIds to only include IDs that actually exist in the active queue
+            $orderedUserIds = array_intersect($orderedUserIds, $existingUserIds);
+            
+            // Find any IDs that exist in the active queue but were not included in the orderedUserIds
+            $missingUserIds = array_diff($existingUserIds, $orderedUserIds);
+            
+            // Merge them so all active queue positions are accounted for
+            $finalUserIds = array_merge($orderedUserIds, $missingUserIds);
+            
+            // First pass: update with temporary offsets
+            foreach ($finalUserIds as $index => $userId) {
+                $pos = $positions->firstWhere('user_id', $userId);
+                if ($pos) {
+                    $pos->queue_number = ($index + 1) + 1000;
+                    $pos->save();
+                }
+            }
+            
+            // Second pass: set the final queue numbers
+            foreach ($finalUserIds as $index => $userId) {
+                $pos = $positions->firstWhere('user_id', $userId);
+                if ($pos) {
+                    $pos->queue_number = $index + 1;
+                    $pos->save();
+                }
+            }
+        });
+    }
+
+    public function getScreenData(): array
+    {
+        $today = now()->toDateString();
+        $queue = $this->getActiveQueue();
+        
+        $orderCounts = Order::whereDate('created_at', $today)
+            ->where('status', 'COMPLETED')
+            ->select('user_id', 'order_type_id', DB::raw('count(*) as total'))
+            ->groupBy('user_id', 'order_type_id')
+            ->get()
+            ->groupBy('user_id');
+
+        $orderTypes = OrderType::pluck('name', 'id')->toArray();
+
+        $data = $queue->map(function ($pos) use ($orderCounts, $orderTypes) {
+            $userCounts = $orderCounts->get($pos->user_id) ?? collect();
+            
+            $counts = [];
+            foreach ($orderTypes as $typeName) {
+                $counts[$typeName] = 0;
+            }
+            
+            foreach ($userCounts as $uc) {
+                $typeName = $orderTypes[$uc->order_type_id] ?? null;
+                if ($typeName) {
+                    $counts[$typeName] = (int)$uc->total;
+                }
+            }
+            
+            return [
+                'user_id' => $pos->user_id,
+                'username' => optional($pos->user)->username,
+                'name' => optional($pos->user)->name,
+                'queue_number' => $pos->queue_number,
+                'is_logged_in' => $pos->user ? $pos->user->isOnline() : false,
+                'order_counts' => $counts,
+            ];
+        })->toArray();
+
+        return [
+            'queue' => $data,
+        ];
     }
 }

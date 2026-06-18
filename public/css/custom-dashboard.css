@@ -92,6 +92,46 @@
 }
 
 /* Custom Cards */
+.queue-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.queue-item-main {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.queue-number-label {
+  display: inline-block;
+  min-width: 4ch;
+  white-space: nowrap;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.queue-user-info {
+  min-width: 0;
+}
+
+.queue-user-name,
+.queue-user-username {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-item-status {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .queue-item.next-turn {
   background-color: var(--primary-light) !important;
   border-left: 4px solid var(--primary) !important;

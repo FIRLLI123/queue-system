@@ -60,6 +60,14 @@
                         <span>Kelola Tipe Order</span>
                     </a>
                 </li>
+
+                <!-- Menu 4: Screen Monitoring -->
+                <li class="nav-item {{ Request::is('admin/screen*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ url('/admin/screen') }}">
+                        <i class="fas fa-fw fa-desktop"></i>
+                        <span>Screen Monitoring</span>
+                    </a>
+                </li>
             @endif
 
             <hr class="sidebar-divider d-none d-md-block">

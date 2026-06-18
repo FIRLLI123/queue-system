@@ -32,20 +32,20 @@ window.renderQueueList = function(containerId, queue) {
       const statusText = pos.is_logged_in ? 'Online' : 'Belum login';
 
       html += `
-        <div class="queue-item ${cardClass} d-flex align-items-center justify-content-between p-3 mb-2 rounded shadow-sm" data-user-id="${pos.user_id}" style="
+        <div class="queue-item queue-item-card ${cardClass} p-3 mb-2 rounded shadow-sm" data-user-id="${pos.user_id}" style="
           transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1), opacity 280ms ease;
           background-color: var(--card);
           border: 1px solid var(--border);
         ">
-          <div class="d-flex align-items-center gap-3" style="gap: 15px;">
-            <span class="fw-bold ${isNext ? 'text-primary fs-5' : 'text-muted'}" style="width: 25px; font-weight: 700;">#${pos.queue_number}</span>
+          <div class="queue-item-main" style="gap: 15px;">
+            <span class="queue-number-label fw-bold ${isNext ? 'text-primary fs-5' : 'text-muted'}">#${pos.queue_number}</span>
             ${statusDot}
-            <div>
-              <h6 class="font-weight-bold mb-0 text-dark" style="font-size: 13px;">${pos.name}</h6>
-              <span class="text-secondary" style="font-size: 11px;">@${pos.username}</span>
+            <div class="queue-user-info">
+              <h6 class="queue-user-name font-weight-bold mb-0 text-dark" style="font-size: 13px;">${pos.name}</h6>
+              <span class="queue-user-username text-secondary" style="font-size: 11px;">@${pos.username}</span>
             </div>
           </div>
-          <div class="text-right">
+          <div class="queue-item-status text-right">
             ${isNext ? statusBadge : `<span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 10px;">${statusText}</span>`}
           </div>
         </div>

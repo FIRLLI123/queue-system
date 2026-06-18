@@ -128,4 +128,22 @@ class WebUserController extends Controller
 
         return response()->json(['message' => 'User deleted successfully.']);
     }
+
+    public function reorderQueue(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'required|integer|exists:users,id',
+        ]);
+
+        $this->queueService->reorderQueue($request->input('user_ids'));
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'REORDER_QUEUE',
+            'description' => 'Admin reordered the CC queue positions.',
+        ]);
+
+        return response()->json(['message' => 'Urutan antrian berhasil diperbarui.']);
+    }
 }
