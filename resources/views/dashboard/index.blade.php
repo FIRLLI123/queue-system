@@ -22,6 +22,44 @@
     @endif
 </div>
 
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow next-turn-hero-card border-0">
+            <div class="card-body p-4 p-lg-5">
+                <div class="next-turn-hero-layout">
+                    <div class="next-turn-hero-main">
+                        <div class="next-turn-hero-label">
+                            <span class="next-turn-hero-chip">
+                                <i class="fas fa-play mr-2"></i>Staf CEC Terdepan
+                            </span>
+                        </div>
+                        <div class="next-turn-hero-profile">
+                            <div class="next-turn-hero-avatar shadow-sm" id="current-turn-avatar">
+                                --
+                            </div>
+                            <div class="next-turn-hero-copy">
+                                <h2 class="next-turn-hero-name mb-2" id="current-turn-name">Memuat Data...</h2>
+                                <div class="next-turn-hero-meta">
+                                    <span class="d-inline-flex align-items-center">
+                                        <span id="current-turn-status-dot" class="offline-indicator-dot mr-2"></span>
+                                        <span id="current-turn-username" class="font-weight-bold">@username</span>
+                                    </span>
+                                    <span class="next-turn-hero-divider d-none d-md-inline">|</span>
+                                    <span>Waktu Terakhir: <span id="current-turn-time" class="font-monospace">--:--:--</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="next-turn-hero-side">
+                        <div class="next-turn-hero-badge">NEXT</div>
+                        <p class="next-turn-hero-note mb-0">Staff ini berada di posisi terdepan untuk menerima order berikutnya secara realtime.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- SECTION 4: Statistik Hari Ini -->
 <div class="row mb-4">
     <!-- Stat CRM -->
@@ -95,11 +133,11 @@
 
 <div class="row">
     
-    <!-- KOLOM KIRI (col-lg-4): Daftar Antrian CC (TV monitoring mode) -->
+    <!-- KOLOM KIRI (col-lg-4): Daftar Antrian CEC (TV monitoring mode) -->
     <div class="col-xl-4 col-lg-5 mb-4">
         <div class="card shadow mb-3">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-users-line mr-2"></i>Daftar Antrian CC</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-users-line mr-2"></i>Daftar Antrian CEC</h6>
                 <span class="badge bg-primary text-white font-weight-bold px-2 py-1" id="queue-count">0 Staf</span>
             </div>
             <div class="card-body p-3">
@@ -111,17 +149,32 @@
                 </div>
             </div>
         </div>
+
+        <div class="card shadow mb-3">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-warning"><i class="fas fa-mug-hot mr-2"></i>Daftar Break</h6>
+                <span class="badge bg-warning text-white font-weight-bold px-2 py-1" id="break-count">0 Staf</span>
+            </div>
+            <div class="card-body p-3">
+                <div class="break-queue-list" id="break-list-container">
+                    <div class="break-empty-state text-center py-3">
+                        <i class="fas fa-mug-hot text-muted mb-2"></i>
+                        <p class="text-secondary mb-0" style="font-size: 11px;">Tidak ada CEC yang sedang break.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <!-- Global status chip di bawah antrian -->
         <div class="alert alert-warning border-0 shadow-sm rounded p-3 mb-0 d-none" id="global-waiting-chip" style="background-color: var(--warning-light);">
             <div class="d-flex align-items-center fs-8 fw-semibold text-warning" style="gap: 8px;">
                 <i class="fas fa-hourglass-start fa-spin"></i>
-                <span id="global-waiting-text">Menunggu antrian CC...</span>
+                <span id="global-waiting-text">Menunggu antrian CEC...</span>
             </div>
         </div>
     </div>
     
-    <!-- KOLOM KANAN (col-lg-8): Form Aksi CC atau Monitor & Log -->
+    <!-- KOLOM KANAN (col-lg-8): Form Aksi CEC atau Monitor & Log -->
     <div class="col-xl-8 col-lg-7">
         
         <div class="row">
@@ -131,7 +184,7 @@
                     <div class="card-header py-3 d-flex align-items-center justify-content-between">
                         <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-plus-circle mr-2"></i>Penerimaan Order Baru</h6>
                         
-                        <!-- Mini status position for CC -->
+                        <!-- Mini status position for CEC -->
                         @if(auth()->user()->role === 'CC')
                             <span class="badge badge-secondary" id="cc-sidebar-position-badge">MENGANTRI</span>
                         @endif
@@ -177,6 +230,18 @@
                                 <i class="fas fa-exclamation-circle mr-1"></i> Silakan pilih tipe order (CRM/CMS/OTHER) terlebih dahulu!
                             </div>
 
+                            @if(auth()->user()->role === 'CC')
+                                <div class="break-control-panel mb-3">
+                                    <div>
+                                        <div class="text-xs font-weight-bold text-gray-600 text-uppercase mb-1">STATUS KESIAPAN</div>
+                                        <div class="break-control-copy" id="break-status-copy">Anda sedang ready dalam antrian.</div>
+                                    </div>
+                                    <button type="button" id="btn-toggle-break" class="btn btn-warning font-weight-bold shadow-sm">
+                                        <i class="fas fa-mug-hot mr-2"></i>Break
+                                    </button>
+                                </div>
+                            @endif
+
                             <button type="submit" id="btn-accept-order" class="btn btn-secondary w-100 py-3 font-weight-bold shadow-sm" disabled style="height: 52px; font-size: 16px;">
                                 Belum Giliran Anda
                             </button>
@@ -212,33 +277,6 @@
         </div>
 
         <div class="row">
-            <!-- 3. Giliran Sekarang (Next CC Detail) -->
-            <div class="col-12 mb-4">
-                <div class="card shadow">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-play mr-2"></i>Staf CC Terdepan (Next)</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-auto mb-3 mb-md-0 text-center">
-                                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center shadow-sm" id="current-turn-avatar" style="width: 70px; height: 70px; font-size: 24px; font-weight: 700;">
-                                    --
-                                </div>
-                            </div>
-                            <div class="col text-center text-md-start">
-                                <h5 class="font-weight-bold text-dark mb-1" id="current-turn-name">Memuat Data...</h5>
-                                <div class="d-flex align-items-center justify-content-center justify-content-md-start fs-8 text-secondary" style="gap: 8px;">
-                                    <span id="current-turn-status-dot" class="offline-indicator-dot"></span>
-                                    <span id="current-turn-username" class="font-weight-bold">@username</span>
-                                    <span class="text-gray-300">|</span>
-                                    <span>Waktu Terakhir: <span id="current-turn-time" class="font-monospace">--:--:--</span></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- 4. Tabel Log Order -->
             <div class="col-xl-6 col-lg-12 mb-4">
                 <div class="card shadow h-100">
@@ -417,6 +455,12 @@
         let currentStats = { CRM: 0, CMS: 0, OTHER: 0, TOTAL: 0 };
         let lastTurnUserId = null;
         let lastOnlineStates = {};
+        const processedActivityIds = new Set();
+        let hasLoadedActivities = false;
+
+        function isSoundEnabled() {
+            return localStorage.getItem('dashboard-sound-enabled') !== 'false';
+        }
 
         // Penanganan Voice List Lintas Browser (Safari/Firefox/Chrome Async Loader)
         let indonesianVoice = null;
@@ -435,6 +479,7 @@
         // Web Audio API Synthesized Chime (Ting-Tung)
         function playChime() {
             return new Promise((resolve) => {
+                if (!isSoundEnabled()) return resolve();
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return resolve();
@@ -481,6 +526,7 @@
 
         // Web Speech API Text-to-Speech (Bahasa Indonesia)
         async function playQueueVoice(name) {
+            if (!isSoundEnabled()) return;
             await playChime();
             
             if ('speechSynthesis' in window) {
@@ -504,7 +550,7 @@
                 utterance.pitch = 1.0;
                 
                 if (indonesianVoice) {
-                    utterance.voice = indonesianVoice;
+                     utterance.voice = indonesianVoice;
                 } else {
                     const voices = window.speechSynthesis.getVoices();
                     const idVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
@@ -518,6 +564,7 @@
         // Web Audio API untuk Login Chime (Arpeggio Naik)
         function playLoginChime() {
             return new Promise((resolve) => {
+                if (!isSoundEnabled()) return resolve();
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return resolve();
@@ -546,6 +593,7 @@
         // Web Audio API untuk Logout Chime (Arpeggio Turun)
         function playLogoutChime() {
             return new Promise((resolve) => {
+                if (!isSoundEnabled()) return resolve();
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return resolve();
@@ -573,6 +621,7 @@
 
         // Suara Panggilan Login Staf CC
         async function speakCCLogin(name) {
+            if (!isSoundEnabled()) return;
             await playLoginChime();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -595,6 +644,7 @@
 
         // Suara Panggilan Logout Staf CC
         async function speakCCLogout(name) {
+            if (!isSoundEnabled()) return;
             await playLogoutChime();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -611,6 +661,41 @@
                     if (idVoice) utterance.voice = idVoice;
                 }
                 
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Suara Panggilan Break CC
+        async function speakCCBreak(name, isReady) {
+            if (!isSoundEnabled()) return;
+            await (isReady ? playLoginChime() : playLogoutChime());
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let speakName = name.replace(/1/g, ' satu')
+                                    .replace(/2/g, ' dua')
+                                     .replace(/3/g, ' tiga')
+                                    .replace(/4/g, ' empat')
+                                    .replace(/5/g, ' lima')
+                                    .replace(/6/g, ' enam')
+                                    .replace(/7/g, ' tujuh')
+                                    .replace(/8/g, ' delapan')
+                                    .replace(/9/g, ' sembilan')
+                                    .replace(/0/g, ' nol');
+                const message = isReady
+                    ? speakName + ' kembali ready'
+                    : speakName + ' sedang break atau istirahat';
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.9;
+
+                if (indonesianVoice) {
+                    utterance.voice = indonesianVoice;
+                } else {
+                    const voices = window.speechSynthesis.getVoices();
+                    const idVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
+                    if (idVoice) utterance.voice = idVoice;
+                }
+
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -725,6 +810,8 @@
             // 1. Render Antrian
             window.renderQueueList('queue-list-container', data.queue);
             document.getElementById('queue-count').innerText = `${data.queue.length} Staf`;
+            window.renderBreakQueueList('break-list-container', data.break_queue || []);
+            document.getElementById('break-count').innerText = `${(data.break_queue || []).length} Staf`;
 
             // Deteksi perubahan status online/offline staf CC
             if (data.queue && data.queue.length > 0) {
@@ -766,17 +853,17 @@
                 
                 if (current.is_logged_in) {
                     statusDot.className = 'online-indicator-dot pulse-green mr-2';
-                    statusDot.setAttribute('title', 'CC Online');
+                    statusDot.setAttribute('title', 'CEC Online');
                     globalWaitingChip.classList.remove('d-none');
                     globalWaitingText.innerText = `Menunggu ${current.name} menerima order`;
                 } else {
                     statusDot.className = 'offline-indicator-dot mr-2';
-                    statusDot.setAttribute('title', 'CC Belum Login (Offline)');
+                    statusDot.setAttribute('title', 'CEC Belum Login (Offline)');
                     globalWaitingChip.classList.remove('d-none');
                     globalWaitingText.innerText = `Menunggu ${current.name} login untuk menerima order`;
                 }
 
-                // Mainkan suara panggilan jika CC terdepan bergeser/berubah
+                // Mainkan suara panggilan jika CEC terdepan bergeser/berubah
                 if (lastTurnUserId !== null && lastTurnUserId !== current.user_id) {
                     playQueueVoice(current.name);
                 }
@@ -797,11 +884,35 @@
             // 4. Update Aksi Form Khusus CC
             if (userRole === 'CC') {
                 const myQueueItem = data.queue.find(item => parseInt(item.user_id) === currentUserId);
+                const myBreakItem = (data.break_queue || []).find(item => parseInt(item.user_id) === currentUserId);
                 const btnAccept = document.getElementById('btn-accept-order');
+                const btnBreak = document.getElementById('btn-toggle-break');
+                const breakStatusCopy = document.getElementById('break-status-copy');
                 const positionBadgeTop = document.getElementById('cc-status-text-top');
                 const sidebarBadge = document.getElementById('cc-sidebar-position-badge');
 
-                if (myQueueItem) {
+                if (myBreakItem || data.my_queue_status === 'BREAK') {
+                    const breakPos = myBreakItem ? (data.break_queue || []).indexOf(myBreakItem) + 1 : '-';
+                    if (sidebarBadge) {
+                        sidebarBadge.innerText = 'BREAK';
+                        sidebarBadge.className = 'badge badge-warning';
+                    }
+                    if (positionBadgeTop) {
+                        positionBadgeTop.innerHTML = `<i class="fas fa-mug-hot mr-1"></i> Anda sedang break (List Break #${breakPos})`;
+                    }
+                    if (btnBreak) {
+                        btnBreak.className = 'btn btn-success font-weight-bold shadow-sm';
+                        btnBreak.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Ready';
+                        btnBreak.dataset.mode = 'ready';
+                    }
+                    if (breakStatusCopy) {
+                        breakStatusCopy.innerText = `Anda sedang break. Klik Ready untuk masuk lagi ke antrian aktif paling bawah.`;
+                    }
+                    btnAccept.setAttribute('disabled', 'true');
+                    btnAccept.className = 'btn btn-secondary w-100 py-3 font-weight-bold shadow-sm';
+                    btnAccept.innerText = 'Sedang Break';
+                    isFirstTurnNotification = false;
+                } else if (myQueueItem) {
                     const myPos = data.queue.indexOf(myQueueItem) + 1;
                     if (sidebarBadge) {
                         sidebarBadge.innerText = myPos === 1 ? 'GILIRAN ANDA' : `ANTRIAN #${myPos}`;
@@ -809,6 +920,14 @@
                     }
                     if (positionBadgeTop) {
                         positionBadgeTop.innerHTML = `<i class="fas fa-headset mr-1"></i> Posisi Anda: Antrian #${myPos} (${myPos === 1 ? 'GILIRAN ANDA' : 'Mengantri'})`;
+                    }
+                    if (btnBreak) {
+                        btnBreak.className = 'btn btn-warning font-weight-bold shadow-sm';
+                        btnBreak.innerHTML = '<i class="fas fa-mug-hot mr-2"></i>Break';
+                        btnBreak.dataset.mode = 'break';
+                    }
+                    if (breakStatusCopy) {
+                        breakStatusCopy.innerText = `Anda ready di antrian #${myPos}. Klik Break untuk keluar sementara dari antrian ready.`;
                     }
 
                     if (myPos === 1) {
@@ -833,6 +952,14 @@
                     }
                     if (positionBadgeTop) {
                         positionBadgeTop.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i> Anda tidak aktif dalam antrian`;
+                    }
+                    if (btnBreak) {
+                        btnBreak.className = 'btn btn-warning font-weight-bold shadow-sm';
+                        btnBreak.innerHTML = '<i class="fas fa-mug-hot mr-2"></i>Break';
+                        btnBreak.dataset.mode = 'break';
+                    }
+                    if (breakStatusCopy) {
+                        breakStatusCopy.innerText = 'Anda belum aktif dalam antrian.';
                     }
                     btnAccept.setAttribute('disabled', 'true');
                     btnAccept.className = 'btn btn-secondary w-100 py-3 font-weight-bold shadow-sm';
@@ -906,13 +1033,14 @@
                     if (activity.action === 'ACCEPT_ORDER') dotClass = 'action-accept';
                     else if (activity.action === 'VOID_ORDER') dotClass = 'action-void';
                     else if (activity.action === 'LOGIN') dotClass = 'action-login';
+                    else if (activity.action === 'BREAK_START' || activity.action === 'BREAK_END') dotClass = 'action-break';
 
                     feedHtml += `
                         <div class="activity-feed-item">
                             <div class="activity-feed-dot ${dotClass}"></div>
                             <div class="w-100 mb-2">
                                 <div class="d-flex align-items-center justify-content-between" style="justify-content: space-between; display: flex;">
-                                    <span class="font-weight-bold text-dark fs-8">@${activity.user || 'system'}</span>
+                                    <span class="font-weight-bold text-dark fs-8">${activity.name ? `${activity.name} <span class="text-muted font-weight-normal" style="font-size: 10px; font-weight: 400;">(@${activity.user})</span>` : (activity.user ? `@${activity.user}` : 'System')}</span>
                                     <span class="text-muted font-monospace" style="font-size: 10px;">${activity.created_at.substring(11, 16)}</span>
                                 </div>
                                 <p class="mb-0 text-secondary fs-8 mt-0.5">${activity.description}</p>
@@ -921,8 +1049,27 @@
                     `;
                 });
                 feedContainer.innerHTML = feedHtml;
+
+                const isInitialActivityLoad = !hasLoadedActivities;
+                data.activities.forEach(activity => {
+                    if (isInitialActivityLoad) {
+                        processedActivityIds.add(activity.id);
+                        return;
+                    }
+
+                    if (!processedActivityIds.has(activity.id)) {
+                        processedActivityIds.add(activity.id);
+                        if (activity.user_id !== currentUserId && (activity.action === 'BREAK_START' || activity.action === 'BREAK_END')) {
+                            const isReady = activity.action === 'BREAK_END';
+                            speakCCBreak(activity.name || activity.user || 'Staf CC', isReady);
+                            window.showToast(activity.description, isReady ? 'success' : 'warning');
+                        }
+                    }
+                });
+                hasLoadedActivities = true;
             } else {
                 feedContainer.innerHTML = `<div class="text-center py-4 text-muted fs-8">Belum ada log.</div>`;
+                hasLoadedActivities = true;
             }
 
             // 7. Update Chat Live Internal State
@@ -1037,6 +1184,42 @@
                 });
             });
 
+            const btnToggleBreak = document.getElementById('btn-toggle-break');
+            if (btnToggleBreak) {
+                btnToggleBreak.addEventListener('click', function() {
+                    const mode = this.dataset.mode === 'ready' ? 'ready' : 'break';
+                    const endpoint = mode === 'ready' ? '/queue/ready' : '/queue/break';
+                    const originalText = this.innerHTML;
+
+                    this.setAttribute('disabled', 'true');
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
+
+                    fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(res => {
+                        if (!res.ok) return res.json().then(data => { throw new Error(data.message || 'Gagal mengubah status antrian') });
+                        return res.json();
+                    })
+                    .then(() => {
+                        window.showToast(mode === 'ready' ? 'Anda kembali ready di antrian.' : 'Anda masuk mode break/istirahat.', mode === 'ready' ? 'success' : 'warning');
+                    })
+                    .catch(err => {
+                        window.showToast(err.message, 'error');
+                    })
+                    .finally(() => {
+                        this.removeAttribute('disabled');
+                        this.innerHTML = originalText;
+                    });
+                });
+            }
+
             // Form Void Confirmation Logic
             const radioPreset = document.querySelectorAll('input[name="preset_reason"]');
             const customReasonContainer = document.getElementById('custom-reason-container');
@@ -1149,6 +1332,7 @@
         // Audio Alert Khusus Chat (Double-Beep)
         function playChatAlertChime() {
             return new Promise((resolve) => {
+                if (!isSoundEnabled()) return resolve();
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return resolve();
@@ -1189,6 +1373,7 @@
 
         // Text-to-Speech Notifikasi Chat Bahasa Indonesia
         async function speakChatMessage(senderName, messageText) {
+            if (!isSoundEnabled()) return;
             await playChatAlertChime();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();

@@ -25,7 +25,7 @@
                 <div class="sidebar-brand-icon rotate-n-15">
                     <i class="fas fa-headset"></i>
                 </div>
-                <div class="sidebar-brand-text mx-3">CC Queue</div>
+                <div class="sidebar-brand-text mx-3">CEC Queue</div>
             </a>
 
             <hr class="sidebar-divider my-0">
@@ -96,6 +96,13 @@
                             <span class="fs-8 text-secondary d-none d-sm-inline" id="connection-status-text">Online</span>
                         </li>
 
+                        <!-- Sound Toggle Button -->
+                        <li class="nav-item mx-2 d-flex align-items-center">
+                            <button id="global-sound-toggle-btn" class="btn btn-sm btn-light border-0 shadow-sm rounded-circle d-flex align-items-center justify-content-center" title="Matikan Suara" style="width: 32px; height: 32px; padding: 0; background: #f8fafc; transition: all 0.2s ease;">
+                                <i class="fas fa-volume-up text-success" id="global-sound-icon" style="font-size: 14px;"></i>
+                            </button>
+                        </li>
+
                         <div class="topbar-divider d-none d-sm-block"></div>
 
                         <!-- User Profile Dropdown -->
@@ -161,6 +168,51 @@
     <script src="{{ asset('js/toast.js') }}"></script>
     <script src="{{ asset('js/polling.js') }}"></script>
     <script src="{{ asset('js/queue-animation.js') }}"></script>
+    
+    <script>
+        $(document).ready(function() {
+            const soundBtn = document.getElementById('global-sound-toggle-btn');
+            const soundIcon = document.getElementById('global-sound-icon');
+            
+            if (soundBtn && soundIcon) {
+                // Initialize sound state
+                let enabled = localStorage.getItem('dashboard-sound-enabled') !== 'false';
+                updateSoundUI(enabled);
+                
+                soundBtn.addEventListener('click', function() {
+                    enabled = localStorage.getItem('dashboard-sound-enabled') !== 'false';
+                    const newEnabled = !enabled;
+                    localStorage.setItem('dashboard-sound-enabled', newEnabled ? 'true' : 'false');
+                    updateSoundUI(newEnabled);
+                    
+                    // Show a toast notifying the user
+                    if (window.showToast) {
+                        window.showToast(newEnabled ? 'Suara notifikasi diaktifkan' : 'Suara notifikasi dinonaktifkan', newEnabled ? 'success' : 'warning');
+                    }
+                });
+
+                // Add slight hover scale effect via JS
+                soundBtn.addEventListener('mouseenter', () => {
+                    soundBtn.style.transform = 'scale(1.1)';
+                });
+                soundBtn.addEventListener('mouseleave', () => {
+                    soundBtn.style.transform = 'scale(1)';
+                });
+            }
+            
+            function updateSoundUI(enabled) {
+                if (enabled) {
+                    soundIcon.className = 'fas fa-volume-up text-success';
+                    soundBtn.title = 'Matikan Suara';
+                    soundBtn.setAttribute('aria-label', 'Matikan Suara');
+                } else {
+                    soundIcon.className = 'fas fa-volume-mute text-danger';
+                    soundBtn.title = 'Aktifkan Suara';
+                    soundBtn.setAttribute('aria-label', 'Aktifkan Suara');
+                }
+            }
+        });
+    </script>
     
     @stack('scripts')
 </body>

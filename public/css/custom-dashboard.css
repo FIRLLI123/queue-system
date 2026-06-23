@@ -86,12 +86,140 @@
   background-color: var(--warning-light);
   color: var(--warning);
 }
+.badge-break-custom {
+  background-color: #fff7ed;
+  color: #c2410c;
+}
 .badge-danger-custom {
   background-color: var(--danger-light);
   color: var(--danger);
 }
 
 /* Custom Cards */
+.next-turn-hero-card {
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.42), transparent 32%),
+    linear-gradient(135deg, #1d4ed8 0%, #2563eb 52%, #60a5fa 100%);
+  overflow: hidden;
+}
+
+.next-turn-hero-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.next-turn-hero-main,
+.next-turn-hero-profile {
+  display: flex;
+  align-items: center;
+}
+
+.next-turn-hero-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 22px;
+}
+
+.next-turn-hero-label {
+  flex: 0 0 auto;
+}
+
+.next-turn-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #eff6ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.next-turn-hero-profile {
+  gap: 18px;
+  min-width: 0;
+}
+
+.next-turn-hero-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.next-turn-hero-copy {
+  min-width: 0;
+}
+
+.next-turn-hero-name {
+  color: #ffffff;
+  font-size: clamp(1.65rem, 2.5vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.next-turn-hero-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: rgba(239, 246, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.next-turn-hero-meta .online-indicator-dot,
+.next-turn-hero-meta .offline-indicator-dot {
+  border: 2px solid rgba(255, 255, 255, 0.22);
+}
+
+.next-turn-hero-divider {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.next-turn-hero-side {
+  flex: 0 0 260px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #eff6ff;
+}
+
+.next-turn-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.next-turn-hero-note {
+  color: rgba(239, 246, 255, 0.86);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .queue-item-card {
   display: flex;
   align-items: center;
@@ -132,10 +260,92 @@
   white-space: nowrap;
 }
 
+.break-queue-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.break-queue-item {
+  background-color: #fffaf0;
+  border: 1px solid #fed7aa;
+  box-shadow: 0 4px 10px -6px rgba(194, 65, 12, 0.35);
+}
+
+.break-number-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 28px;
+  border-radius: 999px;
+  background-color: #ffedd5;
+  color: #c2410c;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.break-empty-state {
+  border: 1px dashed #fed7aa;
+  border-radius: 8px;
+  background-color: #fffaf0;
+}
+
+.break-control-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background-color: #fffaf0;
+}
+
+.break-control-copy {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .queue-item.next-turn {
   background-color: var(--primary-light) !important;
   border-left: 4px solid var(--primary) !important;
   box-shadow: 0 4px 15px -3px rgba(37, 99, 235, 0.15) !important;
+}
+
+@media (max-width: 991.98px) {
+  .next-turn-hero-layout,
+  .next-turn-hero-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .next-turn-hero-side {
+    width: 100%;
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .next-turn-hero-profile {
+    align-items: flex-start;
+  }
+
+  .next-turn-hero-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 24px;
+  }
+
+  .next-turn-hero-name {
+    font-size: 1.5rem;
+  }
+
+  .next-turn-hero-meta {
+    font-size: 0.8rem;
+  }
 }
 
 /* Shimmer Loading */
@@ -228,4 +438,9 @@
 .activity-feed-dot.action-login {
   background-color: var(--primary);
   box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.activity-feed-dot.action-break {
+  background-color: var(--warning);
+  box-shadow: 0 0 0 2px var(--warning-light);
 }

@@ -108,3 +108,44 @@ window.renderQueueList = function(containerId, queue) {
     }
   }
 };
+
+window.renderBreakQueueList = function(containerId, queue) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  if (!queue || queue.length === 0) {
+    container.innerHTML = `
+      <div class="break-empty-state text-center py-3">
+        <i class="fas fa-mug-hot text-muted mb-2"></i>
+        <p class="text-secondary mb-0" style="font-size: 11px;">Tidak ada CC yang sedang break.</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  queue.forEach((pos, idx) => {
+    const statusText = pos.is_logged_in ? 'Online' : 'Belum login';
+    const dot = pos.is_logged_in
+      ? '<span class="online-indicator-dot pulse-green"></span>'
+      : '<span class="offline-indicator-dot"></span>';
+
+    html += `
+      <div class="queue-item-card break-queue-item p-3 mb-2 rounded" data-user-id="${pos.user_id}">
+        <div class="queue-item-main" style="gap: 12px;">
+          <span class="break-number-label">B${idx + 1}</span>
+          ${dot}
+          <div class="queue-user-info">
+            <h6 class="queue-user-name font-weight-bold mb-0 text-dark" style="font-size: 13px;">${pos.name}</h6>
+            <span class="queue-user-username text-secondary" style="font-size: 11px;">@${pos.username}</span>
+          </div>
+        </div>
+        <div class="queue-item-status text-right">
+          <span class="badge-pill-custom badge-break-custom">${statusText}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+};

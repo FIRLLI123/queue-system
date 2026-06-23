@@ -22,6 +22,14 @@ class QueueService
             ->get();
     }
 
+    public function getBreakQueue(): Collection
+    {
+        return QueuePosition::break()
+            ->with(['user'])
+            ->orderBy('queue_number')
+            ->get();
+    }
+
     public function getQueueSnapshot(Collection $queue): array
     {
         return $queue->map(function (QueuePosition $position) {
@@ -105,7 +113,7 @@ class QueueService
         }
 
         if ($lastOrder->user_id !== $user->id) {
-            $this->abort(403, 'Only the CC who accepted the last order may void it.');
+            $this->abort(403, 'Only the CEC who accepted the last order may void it.');
         }
 
         $nextOrderExists = Order::where('id', '>', $lastOrder->id)->exists();
@@ -134,13 +142,18 @@ class QueueService
     public function getDashboardData(User $user): array
     {
         $queue = $this->getActiveQueue();
+        $breakQueue = $this->getBreakQueue();
         $queuePayload = $this->getQueueSnapshot($queue);
+        $breakQueuePayload = $this->getQueueSnapshot($breakQueue);
         $firstPosition = $queue->first();
+        $myPosition = QueuePosition::where('user_id', $user->id)->first();
         $lastOrder = Order::with(['orderType', 'user'])->orderBy('id', 'desc')->first();
         $activities = ActivityLog::with('user')->orderBy('id', 'desc')->limit(10)->get()->map(function (ActivityLog $activity) {
             return [
                 'id' => $activity->id,
+                'user_id' => $activity->user_id,
                 'user' => optional($activity->user)->username,
+                'name' => optional($activity->user)->name,
                 'action' => $activity->action,
                 'description' => $activity->description,
                 'created_at' => $activity->created_at->toDateTimeString(),
@@ -216,14 +229,16 @@ class QueueService
 
         return [
             'queue' => $queuePayload,
+            'break_queue' => $breakQueuePayload,
             'current_turn' => [
                 'user_id' => optional($firstPosition)->user_id,
-                'username' => optional($firstPosition->user)->username,
-                'name' => optional($firstPosition->user)->name,
+                'username' => optional(optional($firstPosition)->user)->username,
+                'name' => optional(optional($firstPosition)->user)->name,
                 'status' => optional($firstPosition)->status,
                 'last_accepted_at' => $firstPosition && $firstPosition->updated_at ? $firstPosition->updated_at->toDateTimeString() : null,
                 'is_logged_in' => $firstPosition && $firstPosition->user ? $firstPosition->user->isOnline() : false,
             ],
+            'my_queue_status' => $myPosition ? $myPosition->status : null,
             'last_order' => $lastOrder ? [
                 'id' => $lastOrder->id,
                 'order_number' => $lastOrder->order_number,
@@ -241,6 +256,77 @@ class QueueService
             'can_accept' => $firstPosition && $firstPosition->user_id === $user->id && $user->isActive(),
             'can_void' => $this->canVoidLastOrder($user),
         ];
+    }
+
+    public function startBreak(User $user): QueuePosition
+    {
+        if (!$user->isActive() || !$user->isCC()) {
+            $this->abort(403, 'Only active CEC users may start a break.');
+        }
+
+        return DB::transaction(function () use ($user) {
+            $position = QueuePosition::where('user_id', $user->id)->lockForUpdate()->first();
+
+            if (!$position) {
+                $maxBreakNumber = QueuePosition::break()->max('queue_number') ?? 0;
+                $position = QueuePosition::create([
+                    'user_id' => $user->id,
+                    'queue_number' => $maxBreakNumber + 1,
+                    'status' => 'BREAK',
+                ]);
+            } elseif ($position->status !== 'BREAK') {
+                $maxBreakNumber = QueuePosition::break()->max('queue_number') ?? 0;
+                $position->queue_number = $maxBreakNumber + 1001;
+                $position->status = 'BREAK';
+                $position->save();
+            }
+
+            $this->normalizeQueueNumbers('ACTIVE');
+            $this->normalizeQueueNumbers('BREAK');
+
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'BREAK_START',
+                'description' => sprintf('%s mulai break/istirahat.', $user->username),
+            ]);
+
+            return $position->fresh('user');
+        });
+    }
+
+    public function endBreak(User $user): QueuePosition
+    {
+        if (!$user->isActive() || !$user->isCC()) {
+            $this->abort(403, 'Only active CEC users may return to ready.');
+        }
+
+        return DB::transaction(function () use ($user) {
+            $position = QueuePosition::where('user_id', $user->id)->lockForUpdate()->first();
+            $maxActiveNumber = QueuePosition::active()->max('queue_number') ?? 0;
+
+            if (!$position) {
+                $position = QueuePosition::create([
+                    'user_id' => $user->id,
+                    'queue_number' => $maxActiveNumber + 1,
+                    'status' => 'ACTIVE',
+                ]);
+            } elseif ($position->status !== 'ACTIVE') {
+                $position->queue_number = $maxActiveNumber + 1001;
+                $position->status = 'ACTIVE';
+                $position->save();
+            }
+
+            $this->normalizeQueueNumbers('BREAK');
+            $this->normalizeQueueNumbers('ACTIVE');
+
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'BREAK_END',
+                'description' => sprintf('%s kembali ready.', $user->username),
+            ]);
+
+            return $position->fresh('user');
+        });
     }
 
     public function canVoidLastOrder(User $user): bool
@@ -288,27 +374,35 @@ class QueueService
         }
     }
 
+    protected function normalizeQueueNumbers(string $status): void
+    {
+        $positions = QueuePosition::where('status', $status)
+            ->orderBy('queue_number')
+            ->get();
+
+        foreach ($positions as $index => $position) {
+            $position->queue_number = ($index + 1) + 1000;
+            $position->save();
+        }
+
+        foreach ($positions as $index => $position) {
+            $position->queue_number = $index + 1;
+            $position->save();
+        }
+    }
+
     public function syncQueueForUser(User $user, bool $isDeleted = false): void
     {
         DB::transaction(function () use ($user, $isDeleted) {
             if ($isDeleted) {
-                $remaining = QueuePosition::active()->orderBy('queue_number')->get();
-                
-                foreach ($remaining as $index => $pos) {
-                    $pos->queue_number = ($index + 1) + 1000;
-                    $pos->save();
-                }
-                
-                foreach ($remaining as $index => $pos) {
-                    $pos->queue_number = $index + 1;
-                    $pos->save();
-                }
+                $this->normalizeQueueNumbers('ACTIVE');
+                $this->normalizeQueueNumbers('BREAK');
                 return;
             }
 
             if ($user->role === 'CC' && $user->isActive()) {
-                $exists = QueuePosition::active()->where('user_id', $user->id)->exists();
-                if (!$exists) {
+                $position = QueuePosition::where('user_id', $user->id)->first();
+                if (!$position) {
                     $maxNumber = QueuePosition::active()->max('queue_number') ?? 0;
                     QueuePosition::create([
                         'user_id' => $user->id,
@@ -317,21 +411,12 @@ class QueueService
                     ]);
                 }
             } else {
-                $position = QueuePosition::active()->where('user_id', $user->id)->first();
+                $position = QueuePosition::where('user_id', $user->id)->first();
                 if ($position) {
                     $position->delete();
 
-                    $remaining = QueuePosition::active()->orderBy('queue_number')->get();
-                    
-                    foreach ($remaining as $index => $pos) {
-                        $pos->queue_number = ($index + 1) + 1000;
-                        $pos->save();
-                    }
-                    
-                    foreach ($remaining as $index => $pos) {
-                        $pos->queue_number = $index + 1;
-                        $pos->save();
-                    }
+                    $this->normalizeQueueNumbers('ACTIVE');
+                    $this->normalizeQueueNumbers('BREAK');
                 }
             }
         });
@@ -376,6 +461,7 @@ class QueueService
     {
         $today = now()->toDateString();
         $queue = $this->getActiveQueue();
+        $breakQueue = $this->getBreakQueue();
         
         $orderCounts = Order::whereDate('created_at', $today)
             ->where('status', 'COMPLETED')
@@ -386,7 +472,7 @@ class QueueService
 
         $orderTypes = OrderType::pluck('name', 'id')->toArray();
 
-        $data = $queue->map(function ($pos) use ($orderCounts, $orderTypes) {
+        $mapPosition = function ($pos, string $queueStatus) use ($orderCounts, $orderTypes) {
             $userCounts = $orderCounts->get($pos->user_id) ?? collect();
             
             $counts = [];
@@ -407,12 +493,29 @@ class QueueService
                 'name' => optional($pos->user)->name,
                 'queue_number' => $pos->queue_number,
                 'is_logged_in' => $pos->user ? $pos->user->isOnline() : false,
+                'queue_status' => $queueStatus,
                 'order_counts' => $counts,
             ];
-        })->toArray();
+        };
+
+        $readyData = $queue->map(function ($pos, $index) use ($mapPosition) {
+            $data = $mapPosition($pos, 'READY');
+            $data['ready_index'] = $index;
+            return $data;
+        });
+
+        $breakData = $breakQueue->map(function ($pos, $index) use ($mapPosition) {
+            $data = $mapPosition($pos, 'BREAK');
+            $data['break_index'] = $index;
+            return $data;
+        });
+
+        $allCcData = $readyData->concat($breakData)->values();
 
         return [
-            'queue' => $data,
+            'queue' => $readyData->values()->toArray(),
+            'break_queue' => $breakData->values()->toArray(),
+            'all_cc' => $allCcData->toArray(),
         ];
     }
 }

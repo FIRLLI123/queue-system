@@ -29,7 +29,6 @@
                         <th>Username</th>
                         <th>Email</th>
                         <th>Role</th>
-                        <th>No. Antrian</th>
                         <th>Status</th>
                         <th style="width: 150px;" class="text-center">Aksi</th>
                     </tr>
@@ -37,7 +36,7 @@
                 <tbody id="users-list-body">
                     <!-- Loaded dynamically via AJAX -->
                     <tr>
-                        <td colspan="8" class="text-center py-5">
+                        <td colspan="7" class="text-center py-5">
                             <div class="spinner-border text-primary spinner-border-sm mr-2" role="status"></div>
                             <span>Memuat data user...</span>
                         </td>
@@ -85,7 +84,7 @@
                             <div class="form-group mb-3">
                                 <label class="text-dark font-weight-bold fs-8">Role</label>
                                 <select name="role" class="form-control rounded-pill px-3" style="height: 40px;" required>
-                                    <option value="CC" selected>CC (Customer Care)</option>
+                                    <option value="CC" selected>CEC (Customer Care)</option>
                                     <option value="ADMIN">ADMIN</option>
                                 </select>
                                 <div class="invalid-feedback px-2"></div>
@@ -150,7 +149,7 @@
                             <div class="form-group mb-3">
                                 <label class="text-dark font-weight-bold fs-8">Role</label>
                                 <select name="role" id="edit-user-role" class="form-control rounded-pill px-3" style="height: 40px;" required>
-                                    <option value="CC">CC (Customer Care)</option>
+                                    <option value="CC">CEC (Customer Care)</option>
                                     <option value="ADMIN">ADMIN</option>
                                 </select>
                                 <div class="invalid-feedback px-2"></div>
@@ -184,7 +183,7 @@
             <div class="modal-body text-center py-4">
                 <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 48px;"></i>
                 <h5 class="font-weight-bold text-dark mb-2">Hapus User?</h5>
-                <p class="text-secondary fs-8 mb-4">Tindakan ini tidak dapat dibatalkan. Antrian CC terkait akan otomatis disesuaikan.</p>
+                <p class="text-secondary fs-8 mb-4">Tindakan ini tidak dapat dibatalkan. Antrian CEC terkait akan otomatis disesuaikan.</p>
                 <input type="hidden" id="delete-user-id">
                 <div class="d-flex justify-content-center gap-2" style="gap: 10px;">
                     <button type="button" class="btn btn-light rounded-pill px-3 btn-sm" data-dismiss="modal">Batal</button>
@@ -246,7 +245,7 @@
                 </ul>
                 
                 <div id="reorder-empty-msg" class="text-center py-4 text-secondary d-none">
-                    Tidak ada staff CC yang aktif saat ini.
+                    Tidak ada staff CEC yang aktif saat ini.
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
@@ -288,10 +287,6 @@ $(document).ready(function() {
                             ? `<span class="badge badge-success px-2.5 py-1.5 rounded-pill font-weight-bold"><i class="fas fa-circle mr-1 fs-9 text-white pulse-green"></i>ACTIVE</span>`
                             : `<span class="badge badge-secondary px-2.5 py-1.5 rounded-pill font-weight-bold">INACTIVE</span>`;
                         
-                        const queueNum = user.role === 'CC' && user.queue_position 
-                            ? `<strong class="text-primary font-monospace">#${user.queue_position.queue_number}</strong>`
-                            : `<span class="text-muted fs-8">-</span>`;
-
                         tbody.append(`
                             <tr>
                                 <td class="font-monospace">${index + 1}</td>
@@ -301,7 +296,6 @@ $(document).ready(function() {
                                 <td><span class="font-monospace text-secondary">@${user.username}</span></td>
                                 <td>${user.email}</td>
                                 <td>${roleBadge}</td>
-                                <td>${queueNum}</td>
                                 <td>${statusBadge}</td>
                                 <td class="text-center">
                                     <button class="btn btn-light btn-sm rounded-circle mr-1 edit-user-btn" data-id="${user.id}" title="Edit User">
@@ -317,7 +311,7 @@ $(document).ready(function() {
                 } else {
                     tbody.html(`
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-secondary">
+                            <td colspan="7" class="text-center py-5 text-secondary">
                                 Tidak ada data user ditemukan.
                             </td>
                         </tr>

@@ -48,6 +48,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'role:CC'])->group(function () {
     Route::post('/orders/accept', [WebOrderController::class, 'accept']);
     Route::post('/orders/void', [WebOrderController::class, 'void']);
+    Route::post('/queue/break', [WebDashboardController::class, 'startBreak']);
+    Route::post('/queue/ready', [WebDashboardController::class, 'endBreak']);
 });
 
 // Admin Only Management Panel

@@ -17,9 +17,12 @@ class UpdateLastSeenAt
     public function handle(Request $request, Closure $next)
     {
         if (auth()->check()) {
-            auth()->user()->update([
-                'last_seen_at' => now(),
-            ]);
+            $user = auth()->user();
+            if (!$user->last_seen_at || $user->last_seen_at->lt(now()->subSeconds(30))) {
+                $user->update([
+                    'last_seen_at' => now(),
+                ]);
+            }
         }
         return $next($request);
     }

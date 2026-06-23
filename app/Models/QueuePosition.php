@@ -28,4 +28,9 @@ class QueuePosition extends Model
     {
         return $query->where('status', 'ACTIVE');
     }
+
+    public function scopeBreak($query)
+    {
+        return $query->where('status', 'BREAK');
+    }
 }

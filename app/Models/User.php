@@ -84,7 +84,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return $this->last_seen_at->gt(now()->subSeconds(15));
+        return $this->last_seen_at->gt(now()->subSeconds(90));
     }
 
     public function setPasswordAttribute($value)

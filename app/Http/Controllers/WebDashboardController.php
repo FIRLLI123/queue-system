@@ -30,6 +30,18 @@ class WebDashboardController extends Controller
         return response()->json($data);
     }
 
+    public function startBreak(Request $request)
+    {
+        $position = $this->queueService->startBreak($request->user());
+        return response()->json(['queue_position' => $position]);
+    }
+
+    public function endBreak(Request $request)
+    {
+        $position = $this->queueService->endBreak($request->user());
+        return response()->json(['queue_position' => $position]);
+    }
+
     public function adminScreen()
     {
         return view('admin.screen');

@@ -121,6 +121,21 @@
     border-color: var(--card-border);
 }
 
+.monitor-card.break-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, var(--card-bg) 100%);
+    border-color: #f59e0b;
+}
+
+.monitor-card.break-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(180deg, #f59e0b, #c2410c);
+}
+
 /* Queue Number Bubble */
 .queue-number-badge {
     display: inline-flex;
@@ -162,6 +177,11 @@
 .status-pill.offline {
     background: rgba(148, 163, 184, 0.15);
     color: #94a3b8;
+}
+
+.status-pill.break {
+    background: rgba(245, 158, 11, 0.16);
+    color: #f59e0b;
 }
 
 .theme-dark .status-pill.offline {
@@ -246,6 +266,34 @@
     border-color: var(--text-main);
 }
 
+.screen-filter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+}
+
+.screen-filter-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 7px 12px;
+    background: transparent;
+    color: var(--text-sub);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.screen-filter-btn:hover,
+.screen-filter-btn.active {
+    background: var(--text-main);
+    color: var(--bg-page);
+}
+
 /* Fullscreen Mode Overrides */
 body.screen-fullscreen-mode {
     overflow: hidden;
@@ -322,6 +370,13 @@ body.screen-fullscreen-mode .screen-monitor-page {
             <div id="digital-clock" class="bg-dark-glass py-2 px-3 rounded-pill fs-8 font-monospace border-glass font-weight-bold" style="letter-spacing: 0.05em;">
                 00:00:00
             </div>
+            <!-- Status Filter -->
+            <div class="screen-filter-group" id="screen-filter-group" aria-label="Filter status CC">
+                <button type="button" class="screen-filter-btn active" data-filter="all">Semua</button>
+                <button type="button" class="screen-filter-btn" data-filter="online">Online</button>
+                <button type="button" class="screen-filter-btn" data-filter="offline">Offline</button>
+                <button type="button" class="screen-filter-btn" data-filter="break">Break</button>
+            </div>
             <!-- Theme Toggle Button -->
             <button id="toggle-theme-btn" class="btn screen-btn rounded-pill btn-sm px-3 py-2 fs-8 font-weight-bold">
                 <i class="fas fa-moon mr-1"></i> Dark Mode
@@ -352,7 +407,14 @@ $(document).ready(function() {
     const statusText = document.getElementById('screen-status-text');
     let pollingInterval = null;
     let previousQueue = null;
+    let previousAllCc = null;
     let isSoundEnabled = localStorage.getItem('screen-monitor-sound') !== 'muted';
+    let currentFilter = localStorage.getItem('screen-monitor-filter') || 'all';
+    if (!['all', 'online', 'offline', 'break'].includes(currentFilter)) {
+        currentFilter = 'all';
+    }
+    let latestCcList = [];
+    let latestFilteredList = [];
 
     // 1. Digital Clock System
     function updateClock() {
@@ -454,14 +516,22 @@ $(document).ready(function() {
 
     // 4. Render Card HTML
     function buildCardHtml(pos, idx) {
-        const isNext = idx === 0;
-        const cardClass = isNext 
-            ? (pos.is_logged_in ? 'active-turn' : 'active-turn offline-card')
-            : (pos.is_logged_in ? '' : 'offline-card');
+        const isBreak = pos.queue_status === 'BREAK';
+        const readyIndex = pos.ready_index !== undefined ? pos.ready_index : idx;
+        const isNext = !isBreak && readyIndex === 0;
+        const cardClass = isBreak
+            ? 'break-card'
+            : (isNext 
+                ? (pos.is_logged_in ? 'active-turn' : 'active-turn offline-card')
+                : (pos.is_logged_in ? '' : 'offline-card'));
         
-        const statusBadge = pos.is_logged_in
-            ? `<span class="status-pill online">ONLINE</span>`
-            : `<span class="status-pill offline">OFFLINE</span>`;
+        const statusBadge = isBreak
+            ? `<span class="status-pill break">BREAK</span>`
+            : (pos.is_logged_in
+                ? `<span class="status-pill online">ONLINE</span>`
+                : `<span class="status-pill offline">OFFLINE</span>`);
+
+        const numberLabel = isBreak ? `B${(pos.break_index || 0) + 1}` : `#${pos.queue_number}`;
 
         const cmsCount = pos.order_counts.CMS || 0;
         const crmCount = pos.order_counts.CRM || 0;
@@ -472,7 +542,7 @@ $(document).ready(function() {
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="d-flex align-items-center" style="gap: 16px;">
                         <div class="queue-number-badge">
-                            #${pos.queue_number}
+                            ${numberLabel}
                         </div>
                         <div>
                             <h5 class="font-weight-bold mb-1" style="font-size: 16px; color: var(--text-main);">${pos.name}</h5>
@@ -501,24 +571,93 @@ $(document).ready(function() {
         `;
     }
 
+    // Filter logic
+    function applyFilter(data) {
+        let baseList = [];
+        if (data && Array.isArray(data.all_cc)) {
+            baseList = data.all_cc;
+        } else if (Array.isArray(data)) {
+            baseList = data;
+        }
+
+        if (currentFilter === 'all') {
+            return baseList;
+        }
+        if (currentFilter === 'online') {
+            return baseList
+                .filter(pos => pos.is_logged_in && pos.queue_status !== 'BREAK')
+                .map((pos, idx) => ({ ...pos, ready_index: idx }));
+        }
+        if (currentFilter === 'offline') {
+            return baseList
+                .filter(pos => !pos.is_logged_in && pos.queue_status !== 'BREAK')
+                .map((pos, idx) => ({ ...pos, ready_index: idx }));
+        }
+        if (currentFilter === 'break') {
+            return baseList
+                .filter(pos => pos.queue_status === 'BREAK')
+                .map((pos, idx) => ({ ...pos, break_index: idx }));
+        }
+        return baseList;
+    }
+
+    function updateFilterButtons() {
+        document.querySelectorAll('#screen-filter-group .screen-filter-btn').forEach(btn => {
+            const filter = btn.getAttribute('data-filter');
+            if (filter === currentFilter) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    function getEmptyFilterText() {
+        const messages = {
+            all: 'Belum ada staff CEC aktif dalam antrian atau break.',
+            online: 'Tidak ada staff CEC online di antrian ready.',
+            offline: 'Tidak ada staff CEC offline di antrian ready.',
+            break: 'Tidak ada staff CEC yang sedang break.',
+        };
+
+        return messages[currentFilter] || 'Tidak ada staff CEC untuk filter yang dipilih.';
+    }
+
+    document.querySelectorAll('#screen-filter-group .screen-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentFilter = this.getAttribute('data-filter');
+            localStorage.setItem('screen-monitor-filter', currentFilter);
+            updateFilterButtons();
+            const filtered = applyFilter(latestCcList);
+            latestFilteredList = filtered;
+            updateMonitorGrid(filtered, true);
+        });
+    });
+
+    // Initialize filter buttons state
+    updateFilterButtons();
+
     // 5. Update Grid with 2D FLIP Animation
-    function updateMonitorGrid(queue) {
+    function updateMonitorGrid(queue, isFilteredView = false) {
         if (!gridContainer) return;
 
-        // Check for queue differences and trigger voice announcements
-        if (previousQueue !== null && isSoundEnabled) {
-            // 1. Check if first person in queue has changed
-            const currentFirst = queue.length > 0 ? queue[0] : null;
-            const previousFirst = previousQueue.length > 0 ? previousQueue[0] : null;
+        // Voice announcements should always be based on the full CC list,
+        // not the filtered view, to avoid misleading announcements.
+        if (!isFilteredView && previousAllCc !== null && isSoundEnabled && latestCcList && Array.isArray(latestCcList.all_cc)) {
+            const currentAllCc = latestCcList.all_cc;
+            const previousAllCcCopy = previousAllCc;
+
+            // 1. Check if first ready person in the full queue has changed
+            const currentFirst = currentAllCc.find(pos => pos.queue_status !== 'BREAK') || null;
+            const previousFirst = previousAllCcCopy.find(pos => pos.queue_status !== 'BREAK') || null;
 
             if (currentFirst && (!previousFirst || currentFirst.user_id !== previousFirst.user_id)) {
-                // First turn shifted!
                 speakAnnouncement(`Antrian bergeser. Giliran berikutnya adalah ${currentFirst.name}.`);
             }
 
             // 2. Check for individual user online/offline status changes
-            queue.forEach(pos => {
-                const prevPos = previousQueue.find(p => p.user_id === pos.user_id);
+            currentAllCc.forEach(pos => {
+                const prevPos = previousAllCcCopy.find(p => p.user_id === pos.user_id);
                 if (prevPos) {
                     if (pos.is_logged_in && !prevPos.is_logged_in) {
                         speakAnnouncement(`${pos.name} sekarang online.`);
@@ -526,14 +665,13 @@ $(document).ready(function() {
                         speakAnnouncement(`${pos.name} sekarang offline.`);
                     }
                 } else {
-                    // New user joined queue
                     const statusText = pos.is_logged_in ? 'online' : 'offline';
                     speakAnnouncement(`${pos.name} masuk antrian, status ${statusText}.`);
                 }
             });
         }
 
-        // Save current queue as previous queue for next comparison
+        // Save current filtered queue as previous queue for next FLIP animation comparison
         previousQueue = JSON.parse(JSON.stringify(queue));
 
         // Step 1: First - record coordinates of existing cards
@@ -554,8 +692,8 @@ $(document).ready(function() {
             html = `
                 <div class="col-12 text-center py-5 bg-dark-glass rounded-lg border-glass">
                     <span style="font-size: 40px;">👥</span>
-                    <h5 class="font-weight-bold mt-3 mb-2" style="color: var(--text-main);">Antrian Kosong</h5>
-                    <p class="fs-7 mb-0" style="color: var(--text-sub);">Belum ada staff CC aktif dalam antrian.</p>
+                    <h5 class="font-weight-bold mt-3 mb-2" style="color: var(--text-main);">Data Tidak Ada</h5>
+                    <p class="fs-7 mb-0" style="color: var(--text-sub);">${getEmptyFilterText()}</p>
                 </div>
             `;
         }
@@ -609,7 +747,15 @@ $(document).ready(function() {
                     statusDot.className = 'online-indicator-dot pulse-green mr-2';
                     statusText.textContent = 'Connected';
                 }
-                updateMonitorGrid(data.queue);
+                latestCcList = data;
+                const filtered = applyFilter(data);
+                latestFilteredList = filtered;
+                updateMonitorGrid(filtered, false);
+
+                // Save full CC list for accurate voice-announcement comparisons next poll
+                if (data && Array.isArray(data.all_cc)) {
+                    previousAllCc = JSON.parse(JSON.stringify(data.all_cc));
+                }
             },
             error: function(xhr, status, error) {
                 console.error("Screen monitoring fetch error:", error);
