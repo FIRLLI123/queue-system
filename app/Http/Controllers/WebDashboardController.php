@@ -26,6 +26,8 @@ class WebDashboardController extends Controller
 
     public function getDashboardData(Request $request)
     {
+        // Push offline users to the end of the queue on every poll
+        $this->queueService->moveOfflineUsersToEnd();
         $data = $this->queueService->getDashboardData($request->user());
         return response()->json($data);
     }
@@ -49,6 +51,8 @@ class WebDashboardController extends Controller
 
     public function getAdminScreenData()
     {
+        // Keep queue sorted with offline users at the end
+        $this->queueService->moveOfflineUsersToEnd();
         $data = $this->queueService->getScreenData();
         return response()->json($data);
     }

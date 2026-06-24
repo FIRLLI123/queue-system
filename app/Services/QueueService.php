@@ -47,22 +47,24 @@ class QueueService
     public function acceptOrder(User $user, OrderType $type): Order
     {
         $queue = $this->getActiveQueue();
-        $firstPosition = $queue->first();
 
-        if (!$firstPosition) {
+        if ($queue->isEmpty()) {
             $this->abort(400, 'Queue is empty.');
         }
 
-        if (!$user->isActive() || $user->id !== $firstPosition->user_id) {
-            $this->abort(403, 'It is not your turn to accept an order.');
+        // Any active CC user in the queue can accept an order
+        $userPosition = $queue->firstWhere('user_id', $user->id);
+        if (!$user->isActive() || !$userPosition) {
+            $this->abort(403, 'You are not in the active queue.');
         }
 
-        return DB::transaction(function () use ($queue, $firstPosition, $user, $type) {
+        return DB::transaction(function () use ($queue, $userPosition, $user, $type) {
             $queueBefore = $this->getQueueSnapshot($queue);
 
+            // Move the accepting user to the end of the queue
             $orderedUserIds = $queue->pluck('user_id')->toArray();
-            array_shift($orderedUserIds);
-            $orderedUserIds[] = $firstPosition->user_id;
+            $orderedUserIds = array_values(array_filter($orderedUserIds, fn($id) => $id !== $user->id));
+            $orderedUserIds[] = $user->id;
 
             // Shift queue numbers using temporary offset to prevent unique constraint violation
             foreach ($orderedUserIds as $index => $userId) {
@@ -253,7 +255,7 @@ class QueueService
             'activities' => $activities,
             'chats' => $chats,
             'chat_users' => $chatUsers,
-            'can_accept' => $firstPosition && $firstPosition->user_id === $user->id && $user->isActive(),
+            'can_accept' => $myPosition && $myPosition->status === 'ACTIVE' && $user->isActive(),
             'can_void' => $this->canVoidLastOrder($user),
         ];
     }
@@ -403,12 +405,24 @@ class QueueService
             if ($user->role === 'CC' && $user->isActive()) {
                 $position = QueuePosition::where('user_id', $user->id)->first();
                 if (!$position) {
-                    $maxNumber = QueuePosition::active()->max('queue_number') ?? 0;
+                    // New user: insert at FRONT (position 1) by shifting all existing users down
+                    // First, shift all existing active positions up using a temp offset
+                    $existingPositions = QueuePosition::active()->orderBy('queue_number')->get();
+                    foreach ($existingPositions as $pos) {
+                        $pos->queue_number = $pos->queue_number + 1000;
+                        $pos->save();
+                    }
+                    // Create the new user at position 1
                     QueuePosition::create([
                         'user_id' => $user->id,
-                        'queue_number' => $maxNumber + 1,
+                        'queue_number' => 1,
                         'status' => 'ACTIVE',
                     ]);
+                    // Shift existing users back down starting at position 2
+                    foreach ($existingPositions as $index => $pos) {
+                        $pos->queue_number = $index + 2;
+                        $pos->save();
+                    }
                 }
             } else {
                 $position = QueuePosition::where('user_id', $user->id)->first();
@@ -417,6 +431,97 @@ class QueueService
 
                     $this->normalizeQueueNumbers('ACTIVE');
                     $this->normalizeQueueNumbers('BREAK');
+                }
+            }
+        });
+    }
+
+    /**
+     * Move all offline users to the end of the active queue.
+     * Online users keep their relative order. Offline users keep their relative
+     * order among themselves — EXCEPT a user who just went offline and previously
+     * had a lower queue_number than other offline users: they are appended LAST.
+     */
+    public function moveOfflineUsersToEnd(): void
+    {
+        DB::transaction(function () {
+            $queue = QueuePosition::active()->with('user')->orderBy('queue_number')->get();
+
+            if ($queue->isEmpty()) return;
+
+            $online  = $queue->filter(fn($pos) => $pos->user && $pos->user->isOnline())->values();
+            $offline = $queue->filter(fn($pos) => !$pos->user || !$pos->user->isOnline())->values();
+
+            if ($offline->isEmpty()) return;
+
+            // Sort offline users by their queue_number so they keep their own relative order.
+            // Any offline user whose queue_number is LOWER than the smallest online user's
+            // queue_number is a "freshly-offline" user — they should go to the very end.
+            $onlineMinQueueNumber = $online->isNotEmpty() ? $online->min('queue_number') : PHP_INT_MAX;
+
+            // Split offline into "was already behind all online" vs "just went offline (was ahead)"
+            $alreadyAtEnd = $offline->filter(fn($p) => $p->queue_number > ($online->max('queue_number') ?? 0))
+                                    ->sortBy('queue_number')->values();
+            $justWentOffline = $offline->filter(fn($p) => $p->queue_number <= ($online->max('queue_number') ?? 0))
+                                       ->sortBy('queue_number')->values();
+
+            // Correct order: online → already-at-end offline → just-went-offline
+            $reordered = $online->concat($alreadyAtEnd)->concat($justWentOffline);
+
+            // Check if already correct
+            $alreadyCorrect = true;
+            foreach ($reordered as $index => $pos) {
+                if ($pos->queue_number !== $index + 1) {
+                    $alreadyCorrect = false;
+                    break;
+                }
+            }
+            if ($alreadyCorrect) return;
+
+            // Apply with temp offsets to avoid unique constraint violations
+            foreach ($reordered as $index => $pos) {
+                $pos->queue_number = ($index + 1) + 1000;
+                $pos->save();
+            }
+            foreach ($reordered as $index => $pos) {
+                $pos->queue_number = $index + 1;
+                $pos->save();
+            }
+        });
+    }
+
+    /**
+     * Move a specific user to the absolute last position in the active queue.
+     * Called immediately on logout so the queue is updated before last_seen_at expires.
+     */
+    public function moveUserToQueueEnd(User $user): void
+    {
+        DB::transaction(function () use ($user) {
+            $queue = QueuePosition::active()->orderBy('queue_number')->get();
+
+            if ($queue->isEmpty()) return;
+
+            $userPosition = $queue->firstWhere('user_id', $user->id);
+            if (!$userPosition) return;
+
+            // Build new order: all other users first, then this user last
+            $otherIds = $queue->where('user_id', '!=', $user->id)->pluck('user_id')->toArray();
+            $reordered = array_values(array_merge($otherIds, [$user->id]));
+
+            // Temp offset pass
+            foreach ($reordered as $index => $userId) {
+                $pos = $queue->firstWhere('user_id', $userId);
+                if ($pos) {
+                    $pos->queue_number = ($index + 1) + 1000;
+                    $pos->save();
+                }
+            }
+            // Final pass
+            foreach ($reordered as $index => $userId) {
+                $pos = $queue->firstWhere('user_id', $userId);
+                if ($pos) {
+                    $pos->queue_number = $index + 1;
+                    $pos->save();
                 }
             }
         });
@@ -510,7 +615,8 @@ class QueueService
             return $data;
         });
 
-        $allCcData = $readyData->concat($breakData)->values();
+        // all_cc excludes offline users (online + break only)
+        $allCcData = $readyData->filter(fn($d) => $d['is_logged_in'])->concat($breakData)->values();
 
         return [
             'queue' => $readyData->values()->toArray(),

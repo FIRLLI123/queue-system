@@ -7,6 +7,7 @@ use App\Http\Controllers\WebOrderController;
 use App\Http\Controllers\WebOrderTypeController;
 use App\Http\Controllers\WebUserController;
 use App\Http\Controllers\WebChatController;
+use App\Http\Controllers\WebReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -74,4 +75,9 @@ Route::middleware(['auth', 'role:ADMIN'])->group(function () {
     // Screen Monitoring
     Route::get('/admin/screen', [WebDashboardController::class, 'adminScreen'])->name('admin.screen');
     Route::get('/admin/screen/data', [WebDashboardController::class, 'getAdminScreenData']);
+
+    // Report
+    Route::get('/admin/report', [WebReportController::class, 'index'])->name('admin.report');
+    Route::get('/admin/report/data', [WebReportController::class, 'getData']);
+    Route::get('/admin/report/export', [WebReportController::class, 'export'])->name('admin.report.export');
 });

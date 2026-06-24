@@ -281,7 +281,7 @@ $(document).ready(function() {
                     data.users.forEach((user, index) => {
                         const roleBadge = user.role === 'ADMIN' 
                             ? `<span class="badge badge-primary px-2.5 py-1.5 rounded-pill font-weight-bold">ADMIN</span>`
-                            : `<span class="badge badge-info px-2.5 py-1.5 rounded-pill font-weight-bold">CC</span>`;
+                            : `<span class="badge badge-info px-2.5 py-1.5 rounded-pill font-weight-bold">CEC</span>`;
                         
                         const statusBadge = user.status === 'ACTIVE'
                             ? `<span class="badge badge-success px-2.5 py-1.5 rounded-pill font-weight-bold"><i class="fas fa-circle mr-1 fs-9 text-white pulse-green"></i>ACTIVE</span>`

@@ -68,6 +68,14 @@
                         <span>Screen Monitoring</span>
                     </a>
                 </li>
+
+                <!-- Menu 5: Laporan Order -->
+                <li class="nav-item {{ Request::is('admin/report*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ url('/admin/report') }}">
+                        <i class="fas fa-fw fa-chart-bar"></i>
+                        <span>Laporan Order</span>
+                    </a>
+                </li>
             @endif
 
             <hr class="sidebar-divider d-none d-md-block">
@@ -110,7 +118,7 @@
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <div class="d-flex flex-column align-items-end text-right mr-2">
                                     <span class="text-gray-600 small font-weight-bold">{{ auth()->user()->name }}</span>
-                                    <span class="text-gray-500 font-weight-normal" style="font-size: 10px; text-transform: uppercase;">{{ auth()->user()->role }}</span>
+                                    <span class="text-gray-500 font-weight-normal" style="font-size: 10px; text-transform: uppercase;">{{ auth()->user()->role === 'CC' ? 'CEC' : auth()->user()->role }}</span>
                                 </div>
                                 <span class="img-profile rounded-circle bg-primary d-inline-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px; font-weight: 700;">
                                     {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}

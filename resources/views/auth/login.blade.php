@@ -404,7 +404,7 @@
                         required
                         autofocus
                     >
-                    <label for="username">Username atau email</label>
+                    <label for="username">User ID</label>
                 </div>
                 @error('username')
                     <p class="field-error-msg"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ $message }}</p>
@@ -445,8 +445,8 @@
                 </button>
             </form>
 
-            <hr class="divider card-item d6">
-            <p class="seed-note card-item d6">Default seeder: <code>admin</code> / <code>password</code></p>
+            <!-- <hr class="divider card-item d6"> -->
+           
         </div>
     </div>
 

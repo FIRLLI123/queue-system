@@ -25,13 +25,10 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        $loginInput = $request->input('username');
-        $field = filter_var($loginInput, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-
         $credentials = [
-            $field => $loginInput,
+            'username' => $request->input('username'),
             'password' => $request->input('password'),
-            'status' => 'ACTIVE',
+            'status'   => 'ACTIVE',
         ];
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
@@ -40,8 +37,8 @@ class LoginController extends Controller
             $user = Auth::user();
 
             ActivityLog::create([
-                'user_id' => $user->id,
-                'action' => 'LOGIN',
+                'user_id'     => $user->id,
+                'action'      => 'LOGIN',
                 'description' => sprintf('%s logged into the web system.', $user->username),
             ]);
 
@@ -56,6 +53,25 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         $user = Auth::user();
+
+        if ($user) {
+            // Resolve QueueService from the container
+            $queueService = app(\App\Services\QueueService::class);
+
+            // 1. Move user to the last queue position immediately so others see the
+            //    correct order on the very next poll (before last_seen_at expires).
+            $queueService->moveUserToQueueEnd($user);
+
+            // 2. Clear last_seen_at so isOnline() returns false instantly —
+            //    no waiting for the 90-second threshold to expire.
+            $user->update(['last_seen_at' => null]);
+
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action'  => 'LOGOUT',
+                'description' => sprintf('%s logged out of the web system.', $user->username),
+            ]);
+        }
 
         Auth::logout();
 

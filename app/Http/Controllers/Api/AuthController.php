@@ -45,6 +45,24 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $user = $request->user();
+
+        if ($user) {
+            $queueService = app(\App\Services\QueueService::class);
+
+            // Move to last queue position immediately
+            $queueService->moveUserToQueueEnd($user);
+
+            // Clear last_seen_at so isOnline() returns false on next poll
+            $user->update(['last_seen_at' => null]);
+
+            ActivityLog::create([
+                'user_id'     => $user->id,
+                'action'      => 'LOGOUT',
+                'description' => sprintf('%s logged out of the system.', $user->username),
+            ]);
+        }
+
         $token = $request->user()->currentAccessToken();
         if ($token && method_exists($token, 'delete')) {
             $token->delete();

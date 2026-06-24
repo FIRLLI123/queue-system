@@ -62,13 +62,13 @@
 
 <!-- SECTION 4: Statistik Hari Ini -->
 <div class="row mb-4">
-    <!-- Stat CRM -->
+    <!-- Stat CRM (blue, first) -->
     <div class="col-xl-3 col-md-6 mb-4 mb-xl-0">
-        <div class="card border-left-success shadow h-100 py-2">
+        <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">CRM Orders</div>
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">CRM Orders</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800 font-monospace num-counter" id="stat-crm-val">0</div>
                     </div>
                     <div class="col-auto">
@@ -79,13 +79,13 @@
         </div>
     </div>
 
-    <!-- Stat CMS -->
+    <!-- Stat CMS (green, second) -->
     <div class="col-xl-3 col-md-6 mb-4 mb-xl-0">
-        <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">CMS Orders</div>
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">CMS Orders</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800 font-monospace num-counter" id="stat-cms-val">0</div>
                     </div>
                     <div class="col-auto">
@@ -96,13 +96,13 @@
         </div>
     </div>
 
-    <!-- Stat OTHER -->
+    <!-- Stat OTHER (yellow/amber, third) -->
     <div class="col-xl-3 col-md-6 mb-4 mb-md-0">
-        <div class="card border-left-purple shadow h-100 py-2" style="border-left-color: #8b5cf6 !important;">
+        <div class="card border-left-warning shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-purple text-uppercase mb-1" style="color: #8b5cf6;">OTHER Orders</div>
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">OTHER Orders</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800 font-monospace num-counter" id="stat-other-val">0</div>
                     </div>
                     <div class="col-auto">
@@ -467,7 +467,14 @@
         function loadVoices() {
             if ('speechSynthesis' in window) {
                 const voices = window.speechSynthesis.getVoices();
-                indonesianVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
+                indonesianVoice = voices.find(v => 
+                    v.lang === 'id-ID' || 
+                    v.lang === 'id_ID' || 
+                    v.lang.toLowerCase().startsWith('id-') || 
+                    v.lang.toLowerCase().startsWith('id_') || 
+                    v.lang.toLowerCase() === 'id' || 
+                    v.name.toLowerCase().includes('indonesia')
+                );
             }
         }
         
@@ -549,12 +556,11 @@
                 utterance.rate = 0.85; 
                 utterance.pitch = 1.0;
                 
+                if (!indonesianVoice) {
+                    loadVoices();
+                }
                 if (indonesianVoice) {
-                     utterance.voice = indonesianVoice;
-                } else {
-                    const voices = window.speechSynthesis.getVoices();
-                    const idVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
-                    if (idVoice) utterance.voice = idVoice;
+                    utterance.voice = indonesianVoice;
                 }
                 
                 window.speechSynthesis.speak(utterance);
@@ -630,12 +636,11 @@
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.9;
                 
+                if (!indonesianVoice) {
+                    loadVoices();
+                }
                 if (indonesianVoice) {
                     utterance.voice = indonesianVoice;
-                } else {
-                    const voices = window.speechSynthesis.getVoices();
-                    const idVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
-                    if (idVoice) utterance.voice = idVoice;
                 }
                 
                 window.speechSynthesis.speak(utterance);
@@ -653,12 +658,11 @@
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.9;
                 
+                if (!indonesianVoice) {
+                    loadVoices();
+                }
                 if (indonesianVoice) {
                     utterance.voice = indonesianVoice;
-                } else {
-                    const voices = window.speechSynthesis.getVoices();
-                    const idVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
-                    if (idVoice) utterance.voice = idVoice;
                 }
                 
                 window.speechSynthesis.speak(utterance);
@@ -688,12 +692,11 @@
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.9;
 
+                if (!indonesianVoice) {
+                    loadVoices();
+                }
                 if (indonesianVoice) {
                     utterance.voice = indonesianVoice;
-                } else {
-                    const voices = window.speechSynthesis.getVoices();
-                    const idVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
-                    if (idVoice) utterance.voice = idVoice;
                 }
 
                 window.speechSynthesis.speak(utterance);
@@ -739,14 +742,16 @@
                     const container = document.getElementById('order-types-container');
                     let html = '';
                     if (data.order_types && data.order_types.length > 0) {
+                        const ORDER_MAPPING = { 'CRM': 0, 'CMS': 1, 'OTHER': 2 };
+                        data.order_types.sort((a, b) => (ORDER_MAPPING[a.name] ?? 99) - (ORDER_MAPPING[b.name] ?? 99));
                         data.order_types.forEach(type => {
-                            let iconHtml = '<i class="fas fa-phone text-success" style="font-size: 24px;"></i>';
+                            let iconHtml = '<i class="fas fa-phone" style="font-size: 24px; color: #2563eb;"></i>';
                             let desc = 'Telepon CRM';
                             if (type.name === 'CMS') {
-                                iconHtml = '<i class="fab fa-whatsapp text-success" style="font-size: 28px;"></i>';
+                                iconHtml = '<i class="fab fa-whatsapp" style="font-size: 28px; color: #16a34a;"></i>';
                                 desc = 'WhatsApp CMS';
                             } else if (type.name === 'OTHER') {
-                                iconHtml = '<i class="fas fa-cog text-purple" style="font-size: 24px;"></i>';
+                                iconHtml = '<i class="fas fa-cog" style="font-size: 24px; color: #d97706;"></i>';
                                 desc = 'Lain-lain';
                             }
 
@@ -807,9 +812,10 @@
 
         // Polling loop
         window.startRealtimePolling(function(data) {
-            // 1. Render Antrian
-            window.renderQueueList('queue-list-container', data.queue);
-            document.getElementById('queue-count').innerText = `${data.queue.length} Staf`;
+            // 1. Render Antrian — hanya tampilkan yang online (is_logged_in = true)
+            const onlineQueue = (data.queue || []).filter(pos => pos.is_logged_in);
+            window.renderQueueList('queue-list-container', onlineQueue);
+            document.getElementById('queue-count').innerText = `${onlineQueue.length} Staf`;
             window.renderBreakQueueList('break-list-container', data.break_queue || []);
             document.getElementById('break-count').innerText = `${(data.break_queue || []).length} Staf`;
 
@@ -930,19 +936,15 @@
                         breakStatusCopy.innerText = `Anda ready di antrian #${myPos}. Klik Break untuk keluar sementara dari antrian ready.`;
                     }
 
-                    if (myPos === 1) {
-                        btnAccept.removeAttribute('disabled');
-                        btnAccept.className = 'btn btn-primary w-100 py-3 font-weight-bold shadow-sm';
-                        btnAccept.innerText = 'Terima Order';
+                    // Any CC in the active queue can now accept an order
+                    btnAccept.removeAttribute('disabled');
+                    btnAccept.className = 'btn btn-primary w-100 py-3 font-weight-bold shadow-sm';
+                    btnAccept.innerText = myPos === 1 ? 'Terima Order (Giliran Anda)' : `Terima Order (Antrian #${myPos})`;
 
-                        if (!isFirstTurnNotification) {
-                            window.showToast('Giliran Anda sekarang! Silakan pilih tipe order dan terima.', 'primary');
-                            isFirstTurnNotification = true;
-                        }
-                    } else {
-                        btnAccept.setAttribute('disabled', 'true');
-                        btnAccept.className = 'btn btn-secondary w-100 py-3 font-weight-bold shadow-sm';
-                        btnAccept.innerText = 'Belum Giliran Anda';
+                    if (myPos === 1 && !isFirstTurnNotification) {
+                        window.showToast('Giliran Anda sekarang! Silakan pilih tipe order dan terima.', 'primary');
+                        isFirstTurnNotification = true;
+                    } else if (myPos !== 1) {
                         isFirstTurnNotification = false;
                     }
                 } else {
@@ -1167,6 +1169,26 @@
                 })
                 .then(data => {
                     window.showToast(`Order ${data.order.order_number} berhasil diterima!`, 'success');
+                    // Voice announcement for the user who accepted the order
+                    if (isSoundEnabled()) {
+                        const orderType = data.order && data.order.order_type ? data.order.order_type.name : '';
+                        if ('speechSynthesis' in window) {
+                            window.speechSynthesis.cancel();
+                            const msg = orderType
+                                ? `Order ${orderType} berhasil diterima. Anda dipindahkan ke urutan terakhir.`
+                                : 'Order berhasil diterima. Anda dipindahkan ke urutan terakhir.';
+                            const utterance = new SpeechSynthesisUtterance(msg);
+                            utterance.lang = 'id-ID';
+                            utterance.rate = 0.9;
+                            if (!indonesianVoice) {
+                                loadVoices();
+                            }
+                            if (indonesianVoice) {
+                                utterance.voice = indonesianVoice;
+                            }
+                            window.speechSynthesis.speak(utterance);
+                        }
+                    }
                     selectedTypeId = null;
                     document.getElementById('selected-order-type-id').value = '';
                     document.querySelectorAll('.custom-toggle-card').forEach(c => {
@@ -1392,12 +1414,11 @@
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.95;
                 
+                if (!indonesianVoice) {
+                    loadVoices();
+                }
                 if (indonesianVoice) {
                     utterance.voice = indonesianVoice;
-                } else {
-                    const voices = window.speechSynthesis.getVoices();
-                    const idVoice = voices.find(v => v.lang === 'id-ID' || v.lang === 'id_ID' || v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'));
-                    if (idVoice) utterance.voice = idVoice;
                 }
                 window.speechSynthesis.speak(utterance);
             }

@@ -219,33 +219,33 @@
 }
 
 .stat-pill.cms {
-    color: #1e4ed8;
-}
-
-.theme-dark .stat-pill.cms {
-    background-color: rgba(59, 130, 246, 0.2) !important;
-    border-color: rgba(59, 130, 246, 0.45) !important;
-    color: #93c5fd !important;
-}
-
-.stat-pill.crm {
     color: #047857;
 }
 
-.theme-dark .stat-pill.crm {
+.theme-dark .stat-pill.cms {
     background-color: rgba(16, 185, 129, 0.2) !important;
     border-color: rgba(16, 185, 129, 0.45) !important;
     color: #6ee7b7 !important;
 }
 
+.stat-pill.crm {
+    color: #1e4ed8;
+}
+
+.theme-dark .stat-pill.crm {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    border-color: rgba(59, 130, 246, 0.45) !important;
+    color: #93c5fd !important;
+}
+
 .stat-pill.other {
-    color: #6d28d9;
+    color: #b45309;
 }
 
 .theme-dark .stat-pill.other {
-    background-color: rgba(139, 92, 246, 0.2) !important;
-    border-color: rgba(139, 92, 246, 0.45) !important;
-    color: #c4b5fd !important;
+    background-color: rgba(245, 158, 11, 0.2) !important;
+    border-color: rgba(245, 158, 11, 0.45) !important;
+    color: #fcd34d !important;
 }
 
 .theme-dark .stat-pill strong {
@@ -416,6 +416,12 @@ $(document).ready(function() {
     let latestCcList = [];
     let latestFilteredList = [];
 
+    // State for 5-minute position-1 warning
+    let firstPositionUserId = null;
+    let firstPositionSince = null;  // timestamp (ms) when this person became position 1
+    let lastWarningAt = null;       // timestamp (ms) of the last warning announcement
+    const WARNING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
     // 1. Digital Clock System
     function updateClock() {
         const clockEl = document.getElementById('digital-clock');
@@ -477,15 +483,37 @@ $(document).ready(function() {
     // 3.5. Sound Announcement System (Speech Synthesis)
     const soundBtn = document.getElementById('toggle-sound-btn');
     
+    let indonesianVoice = null;
+    function loadVoices() {
+        if ('speechSynthesis' in window) {
+            const voices = window.speechSynthesis.getVoices();
+            indonesianVoice = voices.find(v => 
+                v.lang === 'id-ID' || 
+                v.lang === 'id_ID' || 
+                v.lang.toLowerCase().startsWith('id-') || 
+                v.lang.toLowerCase().startsWith('id_') || 
+                v.lang.toLowerCase() === 'id' || 
+                v.name.toLowerCase().includes('indonesia')
+            );
+        }
+    }
+    
+    loadVoices();
+    if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    
     function speakAnnouncement(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'id-ID';
-            const voices = window.speechSynthesis.getVoices();
-            const idVoice = voices.find(voice => voice.lang.includes('id') || voice.lang.includes('ID'));
-            if (idVoice) {
-                utterance.voice = idVoice;
+            utterance.rate = 0.9;
+            if (!indonesianVoice) {
+                loadVoices();
+            }
+            if (indonesianVoice) {
+                utterance.voice = indonesianVoice;
             }
             window.speechSynthesis.speak(utterance);
         }
@@ -557,11 +585,11 @@ $(document).ready(function() {
                 <div class="card-divider"></div>
                 
                 <div class="stats-row">
-                    <div class="stat-pill cms" title="Jumlah Order CMS Selesai Hari Ini">
-                        <i class="fab fa-whatsapp"></i> CMS: <strong>${cmsCount}</strong>
-                    </div>
                     <div class="stat-pill crm" title="Jumlah Order CRM Selesai Hari Ini">
                         <i class="fas fa-phone"></i> CRM: <strong>${crmCount}</strong>
+                    </div>
+                    <div class="stat-pill cms" title="Jumlah Order CMS Selesai Hari Ini">
+                        <i class="fab fa-whatsapp"></i> CMS: <strong>${cmsCount}</strong>
                     </div>
                     <div class="stat-pill other" title="Jumlah Order Lainnya Selesai Hari Ini">
                         <i class="fas fa-cog"></i> Other: <strong>${otherCount}</strong>
@@ -573,32 +601,38 @@ $(document).ready(function() {
 
     // Filter logic
     function applyFilter(data) {
-        let baseList = [];
+        // all_cc = online ready + break (excludes offline) — used for "Semua", "Online", "Break"
+        let allCc = [];
         if (data && Array.isArray(data.all_cc)) {
-            baseList = data.all_cc;
-        } else if (Array.isArray(data)) {
-            baseList = data;
+            allCc = data.all_cc;
+        }
+
+        // full ready queue including offline — used only for "Offline" filter
+        let fullQueue = [];
+        if (data && Array.isArray(data.queue)) {
+            fullQueue = data.queue;
         }
 
         if (currentFilter === 'all') {
-            return baseList;
+            return allCc;
         }
         if (currentFilter === 'online') {
-            return baseList
+            return allCc
                 .filter(pos => pos.is_logged_in && pos.queue_status !== 'BREAK')
                 .map((pos, idx) => ({ ...pos, ready_index: idx }));
         }
         if (currentFilter === 'offline') {
-            return baseList
-                .filter(pos => !pos.is_logged_in && pos.queue_status !== 'BREAK')
+            // Source from full queue so offline users are actually present
+            return fullQueue
+                .filter(pos => !pos.is_logged_in)
                 .map((pos, idx) => ({ ...pos, ready_index: idx }));
         }
         if (currentFilter === 'break') {
-            return baseList
+            return allCc
                 .filter(pos => pos.queue_status === 'BREAK')
                 .map((pos, idx) => ({ ...pos, break_index: idx }));
         }
-        return baseList;
+        return allCc;
     }
 
     function updateFilterButtons() {
@@ -755,6 +789,28 @@ $(document).ready(function() {
                 // Save full CC list for accurate voice-announcement comparisons next poll
                 if (data && Array.isArray(data.all_cc)) {
                     previousAllCc = JSON.parse(JSON.stringify(data.all_cc));
+                }
+
+                // 5-minute warning: check if position-1 person is still waiting
+                if (isSoundEnabled && data && Array.isArray(data.queue) && data.queue.length > 0) {
+                    const currentFirst = data.queue[0]; // first in the ready queue
+                    const now = Date.now();
+
+                    if (currentFirst.user_id !== firstPositionUserId) {
+                        // Position 1 changed – reset the timer
+                        firstPositionUserId = currentFirst.user_id;
+                        firstPositionSince = now;
+                        lastWarningAt = null;
+                    } else {
+                        // Same person still at position 1 — check if 5 minutes have elapsed since last warning
+                        const elapsedSinceFirst = now - firstPositionSince;
+                        const elapsedSinceLastWarning = lastWarningAt ? (now - lastWarningAt) : elapsedSinceFirst;
+
+                        if (elapsedSinceFirst >= WARNING_INTERVAL_MS && elapsedSinceLastWarning >= WARNING_INTERVAL_MS) {
+                            lastWarningAt = now;
+                            speakAnnouncement(`Peringatan! ${currentFirst.name} sudah berada di antrian pertama lebih dari 5 menit dan belum mengambil orderan. Segera terima order!`);
+                        }
+                    }
                 }
             },
             error: function(xhr, status, error) {
