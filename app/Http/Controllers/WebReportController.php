@@ -77,6 +77,7 @@ class WebReportController extends Controller
                     'CRM'      => 0,
                     'CMS'      => 0,
                     'OTHER'    => 0,
+                    'TITIPAN'  => 0,
                     'TOTAL'    => 0,
                 ];
             }
@@ -91,7 +92,7 @@ class WebReportController extends Controller
             $d    = $row->order_date;
             $type = $orderTypes[$row->order_type_id] ?? 'OTHER';
             if (!isset($dateTotals[$d])) {
-                $dateTotals[$d] = ['date' => $d, 'CRM' => 0, 'CMS' => 0, 'OTHER' => 0, 'TOTAL' => 0];
+                $dateTotals[$d] = ['date' => $d, 'CRM' => 0, 'CMS' => 0, 'OTHER' => 0, 'TITIPAN' => 0, 'TOTAL' => 0];
             }
             $dateTotals[$d][$type]  += $row->total;
             $dateTotals[$d]['TOTAL'] += $row->total;
@@ -114,6 +115,7 @@ class WebReportController extends Controller
                     'CRM'        => 0,
                     'CMS'        => 0,
                     'OTHER'      => 0,
+                    'TITIPAN'    => 0,
                     'TOTAL'      => 0,
                 ];
             }
@@ -186,6 +188,7 @@ class WebReportController extends Controller
                     'CRM'     => 0,
                     'CMS'     => 0,
                     'OTHER'   => 0,
+                    'TITIPAN' => 0,
                     'TOTAL'   => 0,
                 ];
             }
@@ -209,7 +212,7 @@ class WebReportController extends Controller
             // UTF-8 BOM for Excel
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
             // Header row
-            fputcsv($handle, ['Tanggal', 'Nama', 'Username', 'CRM', 'CMS', 'OTHER', 'TOTAL']);
+            fputcsv($handle, ['Tanggal', 'Nama', 'Username', 'CRM', 'CMS', 'OTHER', 'TITIPAN', 'TOTAL']);
             foreach ($tableRows as $row) {
                 fputcsv($handle, [
                     $row['Tanggal'],
@@ -218,6 +221,7 @@ class WebReportController extends Controller
                     $row['CRM'],
                     $row['CMS'],
                     $row['OTHER'],
+                    $row['TITIPAN'],
                     $row['TOTAL'],
                 ]);
             }

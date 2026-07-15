@@ -6,11 +6,12 @@
 <style>
 /* ─── Page-level variables ──────────────────────────────────── */
 :root {
-    --report-crm:   #3b82f6; /* Blue */
-    --report-cms:   #10b981; /* Green */
-    --report-other: #eab308; /* Yellow */
-    --report-total: #6b7280; /* Gray */
-    --card-radius:  14px;
+    --report-crm:     #3b82f6; /* Blue */
+    --report-cms:     #10b981; /* Green */
+    --report-other:   #eab308; /* Yellow */
+    --report-titipan: #8b5cf6; /* Purple */
+    --report-total:   #6b7280; /* Gray */
+    --card-radius:    14px;
 }
 
 /* ─── Header gradient card ───────────────────────────────────── */
@@ -61,20 +62,23 @@
 .kpi-val { font-size: 28px; font-weight: 800; line-height: 1; }
 .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .65; margin-top: 3px; }
 
-.kpi-total  { background: linear-gradient(135deg,#f8fafc,#f1f5f9); }
-.kpi-crm    { background: linear-gradient(135deg,#eff6ff,#dbeafe); }
-.kpi-cms    { background: linear-gradient(135deg,#f0fdf4,#ecfdf5); }
-.kpi-other  { background: linear-gradient(135deg,#fffbeb,#fef3c7); }
+.kpi-total    { background: linear-gradient(135deg,#f8fafc,#f1f5f9); }
+.kpi-crm      { background: linear-gradient(135deg,#eff6ff,#dbeafe); }
+.kpi-cms      { background: linear-gradient(135deg,#f0fdf4,#ecfdf5); }
+.kpi-other    { background: linear-gradient(135deg,#fffbeb,#fef3c7); }
+.kpi-titipan  { background: linear-gradient(135deg,#f5f3ff,#ede9fe); }
 
-.kpi-total  .kpi-val { color: #475569; }
-.kpi-crm    .kpi-val { color: #2563eb; }
-.kpi-cms    .kpi-val { color: #059669; }
-.kpi-other  .kpi-val { color: #d97706; }
+.kpi-total    .kpi-val { color: #475569; }
+.kpi-crm      .kpi-val { color: #2563eb; }
+.kpi-cms      .kpi-val { color: #059669; }
+.kpi-other    .kpi-val { color: #d97706; }
+.kpi-titipan  .kpi-val { color: #7c3aed; }
 
-.kpi-total  .kpi-icon { background: rgba(71,85,105,.12); color: #475569; }
-.kpi-crm    .kpi-icon { background: rgba(59,130,246,.12); color: #2563eb; }
-.kpi-cms    .kpi-icon { background: rgba(16,185,129,.12); color: #059669; }
-.kpi-other  .kpi-icon { background: rgba(245,158,11,.12); color: #d97706; }
+.kpi-total    .kpi-icon { background: rgba(71,85,105,.12); color: #475569; }
+.kpi-crm      .kpi-icon { background: rgba(59,130,246,.12); color: #2563eb; }
+.kpi-cms      .kpi-icon { background: rgba(16,185,129,.12); color: #059669; }
+.kpi-other    .kpi-icon { background: rgba(245,158,11,.12); color: #d97706; }
+.kpi-titipan  .kpi-icon { background: rgba(139,92,246,.12); color: #7c3aed; }
 
 /* ─── Filter bar ─────────────────────────────────────────────── */
 .filter-bar {
@@ -140,9 +144,10 @@
 }
 .report-table-card table tbody tr:last-child td { border-bottom: none; }
 .report-table-card table tbody tr:hover td { background: #f8fafc; }
-.badge-crm   { background: rgba(59,130,246,.12); color: #2563eb; }
-.badge-cms   { background: rgba(16,185,129,.12); color: #059669; }
-.badge-other { background: rgba(245,158,11,.12); color: #d97706; }
+.badge-crm     { background: rgba(59,130,246,.12); color: #2563eb; }
+.badge-cms     { background: rgba(16,185,129,.12); color: #059669; }
+.badge-other   { background: rgba(245,158,11,.12); color: #d97706; }
+.badge-titipan { background: rgba(139,92,246,.12); color: #7c3aed; }
 .count-pill {
     display: inline-block;
     min-width: 36px;
@@ -233,6 +238,7 @@
                 <option value="CRM">CRM</option>
                 <option value="CMS">CMS</option>
                 <option value="OTHER">OTHER</option>
+                <option value="TITIPAN">TITIPAN</option>
             </select>
         </div>
         <div class="col-auto mb-2">
@@ -252,7 +258,7 @@
 
 {{-- ── KPI CARDS ───────────────────────────────────────────────────────── --}}
 <div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-3">
+    <div class="col-xl col-md-4 mb-3">
         <div class="kpi-card kpi-total">
             <div class="kpi-icon"><i class="fas fa-layer-group"></i></div>
             <div>
@@ -261,7 +267,7 @@
             </div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-3">
+    <div class="col-xl col-md-4 mb-3">
         <div class="kpi-card kpi-crm">
             <div class="kpi-icon"><i class="fas fa-phone"></i></div>
             <div>
@@ -270,7 +276,7 @@
             </div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-3">
+    <div class="col-xl col-md-4 mb-3">
         <div class="kpi-card kpi-cms">
             <div class="kpi-icon"><i class="fab fa-whatsapp"></i></div>
             <div>
@@ -279,12 +285,21 @@
             </div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-3">
+    <div class="col-xl col-md-4 mb-3">
         <div class="kpi-card kpi-other">
             <div class="kpi-icon"><i class="fas fa-cog"></i></div>
             <div>
                 <div class="kpi-val" id="kpi-other">–</div>
                 <div class="kpi-label">Other Orders</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-4 mb-3">
+        <div class="kpi-card kpi-titipan">
+            <div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div>
+                <div class="kpi-val" id="kpi-titipan">–</div>
+                <div class="kpi-label">Titipan Orders</div>
             </div>
         </div>
     </div>
@@ -359,11 +374,12 @@
                     <th style="text-align:center; color:var(--report-crm);">CRM</th>
                     <th style="text-align:center; color:var(--report-cms);">CMS</th>
                     <th style="text-align:center; color:var(--report-other);">OTHER</th>
+                    <th style="text-align:center; color:var(--report-titipan, #8b5cf6);">TITIPAN</th>
                     <th style="text-align:center;">Total</th>
                 </tr>
             </thead>
             <tbody id="table-body">
-                <tr><td colspan="6" class="text-center py-5 text-muted">
+                <tr><td colspan="7" class="text-center py-5 text-muted">
                     <div class="skeleton" style="height:14px; width:60%; margin:0 auto 10px;"></div>
                     <div class="skeleton" style="height:14px; width:40%; margin:0 auto;"></div>
                 </td></tr>
@@ -430,6 +446,7 @@ $(document).ready(function () {
         const crmData   = dateTotals.map(d => d.CRM   || 0);
         const cmsData   = dateTotals.map(d => d.CMS   || 0);
         const otherData = dateTotals.map(d => d.OTHER || 0);
+        const titipanData = dateTotals.map(d => d.TITIPAN || 0);
         const totalData = dateTotals.map(d => d.TOTAL || 0);
 
         lineChart = new Chart(ctx, {
@@ -481,6 +498,17 @@ $(document).ready(function () {
                         pointHoverRadius: 6,
                         borderWidth: 2,
                         borderDash: [4,4],
+                    },
+                    {
+                        label: 'TITIPAN',
+                        data: titipanData,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139,92,246,.0)',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
                     },
                 ],
             },
@@ -598,6 +626,7 @@ $(document).ready(function () {
             const crmPill   = row.CRM   > 0 ? `<span class="count-pill badge-crm">${row.CRM}</span>`   : `<span class="text-muted">–</span>`;
             const cmsPill   = row.CMS   > 0 ? `<span class="count-pill badge-cms">${row.CMS}</span>`   : `<span class="text-muted">–</span>`;
             const otherPill = row.OTHER > 0 ? `<span class="count-pill badge-other">${row.OTHER}</span>` : `<span class="text-muted">–</span>`;
+            const titipanPill = row.TITIPAN > 0 ? `<span class="count-pill badge-titipan">${row.TITIPAN}</span>` : `<span class="text-muted">–</span>`;
 
             html += `
                 <tr>
@@ -609,8 +638,9 @@ $(document).ready(function () {
                     <td style="text-align:center;">${crmPill}</td>
                     <td style="text-align:center;">${cmsPill}</td>
                     <td style="text-align:center;">${otherPill}</td>
+                    <td style="text-align:center;">${titipanPill}</td>
                     <td style="text-align:center;">
-                        <span class="font-weight-bold text-dark">${row.TOTAL}</span>
+                         <span class="font-weight-bold text-dark">${row.TOTAL}</span>
                     </td>
                 </tr>
             `;
@@ -620,14 +650,15 @@ $(document).ready(function () {
 
     /* ── Update KPIs ────────────────────────────────────────── */
     function updateKPIs(userTotals) {
-        let total = 0, crm = 0, cms = 0, other = 0;
+        let total = 0, crm = 0, cms = 0, other = 0, titipan = 0;
         (userTotals || []).forEach(u => {
-            total += u.TOTAL; crm += u.CRM; cms += u.CMS; other += u.OTHER;
+            total += u.TOTAL; crm += u.CRM; cms += u.CMS; other += u.OTHER; titipan += u.TITIPAN;
         });
         document.getElementById('kpi-total').textContent = fmt(total);
         document.getElementById('kpi-crm').textContent   = fmt(crm);
         document.getElementById('kpi-cms').textContent   = fmt(cms);
         document.getElementById('kpi-other').textContent = fmt(other);
+        document.getElementById('kpi-titipan').textContent = fmt(titipan);
     }
 
     /* ── Populate user dropdown ─────────────────────────────── */

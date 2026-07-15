@@ -61,6 +61,22 @@
                     </a>
                 </li>
 
+                <!-- Menu 3.5: Kelola Titipan Order -->
+                <li class="nav-item {{ Request::is('admin/titipan-orders*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ url('/admin/titipan-orders') }}">
+                        <i class="fas fa-fw fa-clipboard-list"></i>
+                        <span>Kelola Titipan Order</span>
+                    </a>
+                </li>
+
+                <!-- Menu 3.6: Kelola Kebutuhan Titipan -->
+                <li class="nav-item {{ Request::is('admin/titipan-requirements*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ url('/admin/titipan-requirements') }}">
+                        <i class="fas fa-fw fa-tasks"></i>
+                        <span>Kebutuhan Titipan</span>
+                    </a>
+                </li>
+
                 <!-- Menu 4: Screen Monitoring -->
                 <li class="nav-item {{ Request::is('admin/screen*') ? 'active' : '' }}">
                     <a class="nav-link" href="{{ url('/admin/screen') }}">
@@ -151,10 +167,10 @@
                 
             </div>
 
-            <footer class="sticky-footer bg-white py-3">
+            <footer class="sticky-footer bg-white py-3 d-none">
                 <div class="container my-auto">
                     <div class="copyright text-center my-auto">
-                        <span>Queue Dashboard &copy; 2026</span>
+                        <span>Queue Dashboard &copy; 2026 | Developed by <a href="https://firlli.vercel.app" target="_blank" rel="noopener noreferrer" class="font-weight-bold text-primary">Firlli</a></span>
                     </div>
                 </div>
             </footer>
@@ -175,7 +191,7 @@
     <!-- Custom Modular JS for Queue Animations & Realtime Polling -->
     <script src="{{ asset('js/toast.js') }}"></script>
     <script src="{{ asset('js/polling.js') }}"></script>
-    <script src="{{ asset('js/queue-animation.js') }}"></script>
+    <script src="{{ asset('js/queue-animation.js') }}?v={{ filemtime(public_path('js/queue-animation.js')) }}"></script>
     
     <script>
         $(document).ready(function() {

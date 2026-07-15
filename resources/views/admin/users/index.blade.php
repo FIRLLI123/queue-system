@@ -465,7 +465,7 @@ $(document).ready(function() {
             success: function(data) {
                 $('#reorder-loading').addClass('d-none');
                 
-                const ccUsers = (data.users || []).filter(u => u.role === 'CC' && u.status === 'ACTIVE' && u.queue_position);
+                const ccUsers = (data.users || []).filter(u => u.role === 'CC' && u.status === 'ACTIVE' && u.queue_position && u.queue_position.status === 'ACTIVE');
                 // Sort CC users by their queue number ascending
                 ccUsers.sort((a, b) => (a.queue_position ? a.queue_position.queue_number : 999) - (b.queue_position ? b.queue_position.queue_number : 999));
 

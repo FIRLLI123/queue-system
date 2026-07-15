@@ -445,8 +445,9 @@
                 </button>
             </form>
 
-            <!-- <hr class="divider card-item d6"> -->
-           
+            <div class="text-center mt-4 card-item d6" style="font-size: 11px; color: var(--text-faint); text-align: center; margin-top: 24px; display: none;">
+                Queue Dashboard &copy; 2026 | Developed by <a href="https://firlli.vercel.app" target="_blank" rel="noopener noreferrer" style="color: var(--primary); font-weight: 600; text-decoration: none;">Firlli</a>
+            </div>
         </div>
     </div>
 

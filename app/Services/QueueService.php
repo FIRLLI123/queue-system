@@ -104,6 +104,75 @@ class QueueService
         });
     }
 
+    public function acceptTitipan(User $user, \App\Models\TitipanOrder $titipan): Order
+    {
+        $queue = $this->getActiveQueue();
+
+        // Check if the user is in the active queue
+        $userPosition = $queue->firstWhere('user_id', $user->id);
+        if (!$user->isActive() || !$userPosition) {
+            $this->abort(403, 'You are not in the active queue.');
+        }
+
+        return DB::transaction(function () use ($queue, $userPosition, $user, $titipan) {
+            $queueBefore = $this->getQueueSnapshot($queue);
+
+            // Move the accepting user to the end of the queue
+            $orderedUserIds = $queue->pluck('user_id')->toArray();
+            $orderedUserIds = array_values(array_filter($orderedUserIds, fn($id) => $id !== $user->id));
+            $orderedUserIds[] = $user->id;
+
+            // Shift queue numbers using temporary offset to prevent unique constraint violation
+            foreach ($orderedUserIds as $index => $userId) {
+                $position = $queue->firstWhere('user_id', $userId);
+                if ($position) {
+                    $position->queue_number = ($index + 1) + 1000;
+                    $position->save();
+                }
+            }
+
+            foreach ($orderedUserIds as $index => $userId) {
+                $position = $queue->firstWhere('user_id', $userId);
+                if ($position) {
+                    $position->queue_number = $index + 1;
+                    $position->save();
+                }
+            }
+
+            $queueAfter = $this->getQueueSnapshot($this->getActiveQueue());
+
+            // Update titipan order status
+            $titipan->update([
+                'status' => 'COMPLETED',
+                'taken_by_user_id' => $user->id,
+                'taken_at' => now(),
+            ]);
+
+            // Find or create 'TITIPAN' OrderType
+            $type = OrderType::firstOrCreate(
+                ['name' => 'TITIPAN'],
+                ['status' => 'ACTIVE']
+            );
+
+            $order = Order::create([
+                'order_number' => $this->generateOrderNumber(),
+                'user_id' => $user->id,
+                'order_type_id' => $type->id,
+                'queue_before' => $queueBefore,
+                'queue_after' => $queueAfter,
+                'status' => 'COMPLETED',
+            ]);
+
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'ACCEPT_ORDER',
+                'description' => sprintf('%s accepted titipan order %s (%s - %s).', $user->username, $order->order_number, $titipan->requirement, $titipan->description),
+            ]);
+
+            return $order->load('orderType', 'user');
+        });
+    }
+
     public function voidLastOrder(User $user, string $reason): Order
     {
         $lastOrder = Order::where('status', 'COMPLETED')
@@ -257,6 +326,20 @@ class QueueService
             'chat_users' => $chatUsers,
             'can_accept' => $myPosition && $myPosition->status === 'ACTIVE' && $user->isActive(),
             'can_void' => $this->canVoidLastOrder($user),
+            'titipan_orders' => \App\Models\TitipanOrder::where('status', 'CREATE')
+                ->orderBy('booking_date', 'asc')
+                ->orderBy('booking_time', 'asc')
+                ->get()
+                ->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'booking_date' => $t->booking_date->toDateString(),
+                        'booking_time' => substr($t->booking_time, 0, 5),
+                        'requirement' => $t->requirement,
+                        'description' => $t->description,
+                        'status' => $t->status,
+                    ];
+                })->toArray(),
         ];
     }
 
@@ -438,9 +521,10 @@ class QueueService
 
     /**
      * Move all offline users to the end of the active queue.
-     * Online users keep their relative order. Offline users keep their relative
-     * order among themselves — EXCEPT a user who just went offline and previously
-     * had a lower queue_number than other offline users: they are appended LAST.
+     * Online users always come first and keep their relative order.
+     * Offline users always come last and keep their relative order.
+     * This runs on every poll, so the queue stays clean regardless of
+     * cache state or when users went offline.
      */
     public function moveOfflineUsersToEnd(): void
     {
@@ -449,26 +533,14 @@ class QueueService
 
             if ($queue->isEmpty()) return;
 
-            $online  = $queue->filter(fn($pos) => $pos->user && $pos->user->isOnline())->values();
-            $offline = $queue->filter(fn($pos) => !$pos->user || !$pos->user->isOnline())->values();
+            // Separate online and offline users
+            $onlinePositions  = $queue->filter(fn($pos) => $pos->user && $pos->user->isOnline())->values();
+            $offlinePositions = $queue->filter(fn($pos) => !$pos->user || !$pos->user->isOnline())->values();
 
-            if ($offline->isEmpty()) return;
+            // Online first, then offline — both keeping their current relative order
+            $reordered = $onlinePositions->concat($offlinePositions);
 
-            // Sort offline users by their queue_number so they keep their own relative order.
-            // Any offline user whose queue_number is LOWER than the smallest online user's
-            // queue_number is a "freshly-offline" user — they should go to the very end.
-            $onlineMinQueueNumber = $online->isNotEmpty() ? $online->min('queue_number') : PHP_INT_MAX;
-
-            // Split offline into "was already behind all online" vs "just went offline (was ahead)"
-            $alreadyAtEnd = $offline->filter(fn($p) => $p->queue_number > ($online->max('queue_number') ?? 0))
-                                    ->sortBy('queue_number')->values();
-            $justWentOffline = $offline->filter(fn($p) => $p->queue_number <= ($online->max('queue_number') ?? 0))
-                                       ->sortBy('queue_number')->values();
-
-            // Correct order: online → already-at-end offline → just-went-offline
-            $reordered = $online->concat($alreadyAtEnd)->concat($justWentOffline);
-
-            // Check if already correct
+            // Check if the database already reflects this order
             $alreadyCorrect = true;
             foreach ($reordered as $index => $pos) {
                 if ($pos->queue_number !== $index + 1) {
@@ -529,6 +601,8 @@ class QueueService
 
     public function reorderQueue(array $orderedUserIds): void
     {
+        $orderedUserIds = array_map('intval', $orderedUserIds);
+
         DB::transaction(function () use ($orderedUserIds) {
             $positions = QueuePosition::active()->orderBy('queue_number')->get();
             $existingUserIds = $positions->pluck('user_id')->toArray();
@@ -560,6 +634,8 @@ class QueueService
                 }
             }
         });
+
+        \Illuminate\Support\Facades\Cache::put('last_queue_reorder_at', now()->timestamp, 86400);
     }
 
     public function getScreenData(): array
@@ -622,6 +698,20 @@ class QueueService
             'queue' => $readyData->values()->toArray(),
             'break_queue' => $breakData->values()->toArray(),
             'all_cc' => $allCcData->toArray(),
+            'titipan_orders' => \App\Models\TitipanOrder::where('status', 'CREATE')
+                ->orderBy('booking_date', 'asc')
+                ->orderBy('booking_time', 'asc')
+                ->get()
+                ->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'booking_date' => $t->booking_date->toDateString(),
+                        'booking_time' => substr($t->booking_time, 0, 5),
+                        'requirement' => $t->requirement,
+                        'description' => $t->description,
+                        'status' => $t->status,
+                    ];
+                })->toArray(),
         ];
     }
 }

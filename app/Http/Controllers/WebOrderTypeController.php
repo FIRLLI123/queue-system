@@ -22,7 +22,10 @@ class WebOrderTypeController extends Controller
 
     public function indexActive()
     {
-        $types = OrderType::active()->orderBy('name')->get();
+        $types = OrderType::active()
+            ->where('name', '!=', 'TITIPAN')
+            ->orderBy('name')
+            ->get();
         return response()->json(['order_types' => $types]);
     }
 

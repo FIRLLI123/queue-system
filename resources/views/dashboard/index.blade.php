@@ -178,6 +178,21 @@
     <div class="col-xl-8 col-lg-7">
         
         <div class="row">
+            <!-- Titipan Order Alerts Panel -->
+            <div class="col-12 mb-4 d-none" id="titipan-alerts-card">
+                <div class="card border-left-warning shadow py-2" style="background-color: #fffbeb; border-left: .25rem solid #eab308 !important;">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-bell text-warning mr-2" style="font-size: 20px;"></i>
+                            <h6 class="m-0 font-weight-bold text-dark fs-7">Booking Titipan Order Menunggu Tindakan</h6>
+                        </div>
+                        <div id="titipan-alerts-list" class="d-flex flex-column gap-3" style="gap: 12px;">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 1. Form Terima Order (Role-Based) -->
             <div class="col-12 mb-4">
                 <div class="card shadow">
@@ -442,6 +457,7 @@
     </div>
 </div>
 
+
 @endsection
 
 @push('scripts')
@@ -457,6 +473,13 @@
         let lastOnlineStates = {};
         const processedActivityIds = new Set();
         let hasLoadedActivities = false;
+
+        // 5-minute warning state
+        let firstPositionUserId = null;
+        let firstPositionSince = null;
+        let lastWarningAt = null;
+        const WARNING_INTERVAL_MS = 5 * 60 * 1000;
+        let lastTitipanWarningAt = {};
 
         function isSoundEnabled() {
             return localStorage.getItem('dashboard-sound-enabled') !== 'false';
@@ -481,6 +504,22 @@
         loadVoices();
         if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
             window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        function speakAnnouncement(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.9;
+                if (!indonesianVoice) {
+                    loadVoices();
+                }
+                if (indonesianVoice) {
+                    utterance.voice = indonesianVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
         }
 
         // Web Audio API Synthesized Chime (Ting-Tung)
@@ -539,7 +578,7 @@
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 
-                let speakName = name;
+                let speakName = name.toLowerCase();
                 speakName = speakName.replace(/1/g, ' satu')
                                      .replace(/2/g, ' dua')
                                      .replace(/3/g, ' tiga')
@@ -631,7 +670,7 @@
             await playLoginChime();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                let speakName = name.replace(/1/g, ' satu').replace(/2/g, ' dua').replace(/3/g, ' tiga').replace(/4/g, ' empat').replace(/5/g, ' lima');
+                let speakName = name.toLowerCase().replace(/1/g, ' satu').replace(/2/g, ' dua').replace(/3/g, ' tiga').replace(/4/g, ' empat').replace(/5/g, ' lima');
                 const utterance = new SpeechSynthesisUtterance(speakName + ' telah online');
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.9;
@@ -653,7 +692,7 @@
             await playLogoutChime();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                let speakName = name.replace(/1/g, ' satu').replace(/2/g, ' dua').replace(/3/g, ' tiga').replace(/4/g, ' empat').replace(/5/g, ' lima');
+                let speakName = name.toLowerCase().replace(/1/g, ' satu').replace(/2/g, ' dua').replace(/3/g, ' tiga').replace(/4/g, ' empat').replace(/5/g, ' lima');
                 const utterance = new SpeechSynthesisUtterance(speakName + ' telah offline');
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.9;
@@ -675,7 +714,7 @@
             await (isReady ? playLoginChime() : playLogoutChime());
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                let speakName = name.replace(/1/g, ' satu')
+                let speakName = name.toLowerCase().replace(/1/g, ' satu')
                                     .replace(/2/g, ' dua')
                                      .replace(/3/g, ' tiga')
                                     .replace(/4/g, ' empat')
@@ -718,6 +757,75 @@
                 }
             };
             window.requestAnimationFrame(step);
+        }
+
+        function updateTitipanDashboard(titipanOrders, canAccept) {
+            const cardContainer = document.getElementById('titipan-alerts-card');
+            const listContainer = document.getElementById('titipan-alerts-list');
+            if (!cardContainer || !listContainer) return;
+
+            if (!titipanOrders || titipanOrders.length === 0) {
+                cardContainer.classList.add('d-none');
+                listContainer.innerHTML = '';
+                return;
+            }
+
+            cardContainer.classList.remove('d-none');
+            let html = '';
+            const now = new Date();
+
+            titipanOrders.forEach(item => {
+                const dateStr = item.booking_date; // YYYY-MM-DD
+                const timeStr = item.booking_time; // HH:MM
+                const bookingDateTime = new Date(`${dateStr}T${timeStr}:00`);
+                const timeDiffMs = bookingDateTime.getTime() - now.getTime();
+                const timeDiffMinutes = timeDiffMs / (60 * 1000);
+
+                // Format date
+                const d = new Date(item.booking_date);
+                const formattedDate = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                const formattedTime = item.booking_time.substring(0, 5);
+
+                // Play voice reminder 1 hour before booking (60 minutes) and repeat every 15 minutes
+                if (timeDiffMinutes <= 60 && item.status === 'CREATE') {
+                    const lastPlay = lastTitipanWarningAt[item.id] || 0;
+                    if (now.getTime() - lastPlay >= 15 * 60 * 1000) {
+                        lastTitipanWarningAt[item.id] = now.getTime();
+                        if (isSoundEnabled()) {
+                            const voiceText = `Pemberitahuan, ada titipan booking antrian untuk pukul ${formattedTime} kebutuhan ${item.requirement}`;
+                            speakAnnouncement(voiceText);
+                        }
+                    }
+                }
+
+                // If userRole !== 'CC', or canAccept is false, disable button
+                const disabledAttr = (userRole !== 'CC' || !canAccept) ? 'disabled' : '';
+                const btnTitle = (userRole !== 'CC') 
+                    ? 'Hanya Staf CC yang dapat mengambil titipan order.' 
+                    : (!canAccept ? 'Anda harus ready di antrian untuk mengambil titipan.' : 'Terima Titipan Order ini.');
+
+                html += `
+                    <div class="p-3 rounded border" style="background-color: #fff; border-color: rgba(234,179,8,0.2) !important;">
+                        <div class="row align-items-center">
+                            <div class="col-md-9 mb-2 mb-md-0">
+                                <div class="d-flex flex-wrap align-items-center mb-1" style="gap: 8px;">
+                                    <span class="badge bg-light text-warning px-2.5 py-1 rounded-pill border border-warning fs-8 font-weight-bold"><i class="fas fa-clipboard-list mr-1"></i>${item.requirement}</span>
+                                    <span class="badge bg-warning text-dark px-2 py-1 fs-8 font-monospace font-weight-bold"><i class="far fa-clock mr-1"></i>Pukul ${formattedTime}</span>
+                                    <span class="text-dark font-weight-bold fs-8">${formattedDate}</span>
+                                </div>
+                                <div class="text-secondary fs-8">${item.description || 'Tidak ada deskripsi.'}</div>
+                            </div>
+                            <div class="col-md-3 text-right">
+                                <button type="button" class="btn btn-warning btn-sm rounded-pill px-3 font-weight-bold accept-titipan-btn" data-id="${item.id}" ${disabledAttr} title="${btnTitle}">
+                                    <i class="fas fa-check-circle mr-1"></i> Terima Titipan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            listContainer.innerHTML = html;
         }
 
         function updateStats(newStats) {
@@ -818,6 +926,7 @@
             document.getElementById('queue-count').innerText = `${onlineQueue.length} Staf`;
             window.renderBreakQueueList('break-list-container', data.break_queue || []);
             document.getElementById('break-count').innerText = `${(data.break_queue || []).length} Staf`;
+            updateTitipanDashboard(data.titipan_orders, data.can_accept);
 
             // Deteksi perubahan status online/offline staf CC
             if (data.queue && data.queue.length > 0) {
@@ -1131,6 +1240,41 @@
                     renderUserList();
                 }
             }
+
+            // 5-minute warning: check if position-1 person is still waiting (audible for all CC/CEC users)
+            if (isSoundEnabled() && data && Array.isArray(data.queue) && data.queue.length > 0) {
+                const currentFirst = data.queue[0]; // first in the ready queue
+                const now = Date.now();
+
+                if (currentFirst.user_id !== firstPositionUserId) {
+                    // Position 1 changed – reset the timer
+                    firstPositionUserId = currentFirst.user_id;
+                    firstPositionSince = now;
+                    lastWarningAt = null;
+                } else {
+                    // Same person still at position 1 — check if 5 minutes have elapsed since last warning
+                    const elapsedSinceFirst = now - firstPositionSince;
+                    const elapsedSinceLastWarning = lastWarningAt ? (now - lastWarningAt) : elapsedSinceFirst;
+
+                    if (elapsedSinceFirst >= WARNING_INTERVAL_MS && elapsedSinceLastWarning >= WARNING_INTERVAL_MS) {
+                        lastWarningAt = now;
+                        if ('speechSynthesis' in window) {
+                            window.speechSynthesis.cancel();
+                            const warningText = `Antrian selanjutnya ${currentFirst.name} harap bersiap menerima order ERA`;
+                            const utterance = new SpeechSynthesisUtterance(warningText.toLowerCase());
+                            utterance.lang = 'id-ID';
+                            utterance.rate = 0.9;
+                            if (!indonesianVoice) {
+                                loadVoices();
+                            }
+                            if (indonesianVoice) {
+                                utterance.voice = indonesianVoice;
+                            }
+                            window.speechSynthesis.speak(utterance);
+                        }
+                    }
+                }
+            }
         }, 3000);
 
         // Submit Form Terima Order (Khusus CC)
@@ -1326,6 +1470,55 @@
                     btnConfirm.innerHTML = originalText;
                 });
             });
+
+            // Bind click event listener for accept titipan buttons
+            $(document).on('click', '.accept-titipan-btn', function() {
+                const id = $(this).data('id');
+                const btn = $(this);
+                const originalHtml = btn.html();
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...');
+
+                $.ajax({
+                    url: '/orders/titipan/accept',
+                    method: 'POST',
+                    data: JSON.stringify({ id: id }),
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                        'Accept': 'application/json'
+                    },
+                    success: function(response) {
+                        window.showToast(`Titipan order berhasil diterima!`, 'success');
+                        if (isSoundEnabled()) {
+                            if ('speechSynthesis' in window) {
+                                window.speechSynthesis.cancel();
+                                const msg = `Titipan order telah diterima. Anda dipindahkan ke urutan terakhir.`;
+                                const utterance = new SpeechSynthesisUtterance(msg);
+                                utterance.lang = 'id-ID';
+                                utterance.rate = 0.9;
+                                if (indonesianVoice) {
+                                    utterance.voice = indonesianVoice;
+                                }
+                                window.speechSynthesis.speak(utterance);
+                            }
+                        }
+                        // Reset selected order card style
+                        selectedTypeId = null;
+                        document.getElementById('selected-order-type-id').value = '';
+                        document.querySelectorAll('.custom-toggle-card').forEach(c => {
+                            c.classList.remove('selected');
+                            c.style.borderColor = 'var(--border)';
+                            c.style.backgroundColor = 'var(--card)';
+                            c.style.boxShadow = 'none';
+                        });
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).html(originalHtml);
+                        const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Gagal menerima titipan order.';
+                        window.showToast(msg, 'danger');
+                    }
+                });
+            });
         }
 
         // ==========================================
@@ -1399,7 +1592,7 @@
             await playChatAlertChime();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                let speakSender = senderName.replace(/1/g, ' satu')
+                let speakSender = senderName.toLowerCase().replace(/1/g, ' satu')
                                             .replace(/2/g, ' dua')
                                             .replace(/3/g, ' tiga')
                                             .replace(/4/g, ' empat')
@@ -1430,6 +1623,25 @@
                 chatUserListPanel.innerHTML = '<div class="text-muted text-center py-4 fs-8">Tidak ada rekan aktif saat ini.</div>';
                 return;
             }
+
+            // Sort: users with unread messages first, then online status, then by name
+            localChatUsers.sort((a, b) => {
+                const unreadA = localChats.filter(c => c.sender_id === a.id && !c.is_read).length;
+                const unreadB = localChats.filter(c => c.sender_id === b.id && !c.is_read).length;
+                
+                if (unreadA > 0 && unreadB === 0) return -1;
+                if (unreadA === 0 && unreadB > 0) return 1;
+                if (unreadA > 0 && unreadB > 0) {
+                    return unreadB - unreadA; // more unread messages first
+                }
+                
+                // If both are read, sort by online status
+                if (a.is_online && !b.is_online) return -1;
+                if (!a.is_online && b.is_online) return 1;
+                
+                // Then sort alphabetically
+                return a.name.localeCompare(b.name);
+            });
 
             let html = '';
             localChatUsers.forEach(user => {

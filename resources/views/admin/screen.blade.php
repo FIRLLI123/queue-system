@@ -347,6 +347,48 @@ body.screen-fullscreen-mode .screen-monitor-page {
     70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
     100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
 }
+
+/* Styling for Titipan Order Notification on Screen */
+.titipan-warning-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(30, 41, 59, 0.8) 100%);
+    border: 2px solid #eab308;
+    border-radius: 16px;
+    padding: 20px;
+    color: var(--text-main);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-light .titipan-warning-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(255, 255, 255, 0.95) 100%);
+    border: 2px solid #eab308;
+    color: #0f172a;
+}
+
+.titipan-warning-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: #eab308;
+}
+
+.animate-pulse-yellow {
+    animation: pulse-yellow 2s infinite;
+}
+
+@keyframes pulse-yellow {
+    0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+}
+
+.bg-light.text-warning {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+}
 </style>
 @endpush
 
@@ -396,6 +438,17 @@ body.screen-fullscreen-mode .screen-monitor-page {
     <div class="monitor-grid" id="monitor-grid-container">
         <!-- Will be dynamically populated via JS -->
     </div>
+
+    <!-- Container untuk Titipan Order -->
+    <div id="titipan-panel-container" class="mt-5 d-none">
+        <hr style="border-color: var(--divider-color) !important;">
+        <h4 class="font-weight-bold mb-3 d-flex align-items-center text-warning" style="font-size: 18px;">
+            <i class="fas fa-exclamation-circle mr-2"></i> Terdapat Booking Titipan Order
+        </h4>
+        <div class="row" id="titipan-list-grid">
+            <!-- Will be dynamically populated via JS -->
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -421,6 +474,7 @@ $(document).ready(function() {
     let firstPositionSince = null;  // timestamp (ms) when this person became position 1
     let lastWarningAt = null;       // timestamp (ms) of the last warning announcement
     const WARNING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+    let lastTitipanWarningAt = {};
 
     // 1. Digital Clock System
     function updateClock() {
@@ -506,7 +560,8 @@ $(document).ready(function() {
     function speakAnnouncement(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
+            // Convert to lowercase to prevent speech engines from spelling out uppercase names letter-by-letter
+            const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
             utterance.lang = 'id-ID';
             utterance.rate = 0.9;
             if (!indonesianVoice) {
@@ -770,6 +825,64 @@ $(document).ready(function() {
         });
     }
 
+    function updateTitipanPanel(titipanOrders) {
+        const panelContainer = document.getElementById('titipan-panel-container');
+        const grid = document.getElementById('titipan-list-grid');
+        if (!panelContainer || !grid) return;
+
+        if (!titipanOrders || titipanOrders.length === 0) {
+            panelContainer.classList.add('d-none');
+            grid.innerHTML = '';
+            return;
+        }
+
+        panelContainer.classList.remove('d-none');
+        let html = '';
+        const now = new Date();
+
+        titipanOrders.forEach(item => {
+            const dateStr = item.booking_date; // YYYY-MM-DD
+            const timeStr = item.booking_time; // HH:MM
+            const bookingDateTime = new Date(`${dateStr}T${timeStr}:00`);
+            const timeDiffMs = bookingDateTime.getTime() - now.getTime();
+            const timeDiffMinutes = timeDiffMs / (60 * 1000);
+
+            // Format date
+            const d = new Date(item.booking_date);
+            const formattedDate = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const formattedTime = item.booking_time.substring(0, 5);
+
+            // Play voice reminder 1 hour before booking (60 minutes) and repeat every 15 minutes
+            if (timeDiffMinutes <= 60 && item.status === 'CREATE') {
+                const lastPlay = lastTitipanWarningAt[item.id] || 0;
+                if (now.getTime() - lastPlay >= 15 * 60 * 1000) {
+                    lastTitipanWarningAt[item.id] = now.getTime();
+                    if (isSoundEnabled) {
+                        const voiceText = `Pemberitahuan, ada titipan booking antrian untuk pukul ${formattedTime} kebutuhan ${item.requirement}`;
+                        speakAnnouncement(voiceText);
+                    }
+                }
+            }
+
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="titipan-warning-card animate-pulse-yellow border-glass">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-light text-warning px-2.5 py-1 rounded-pill border border-warning fs-8 font-weight-bold mr-2"><i class="fas fa-clipboard-list mr-1"></i>${item.requirement}</span>
+                                <span class="text-white font-weight-bold fs-7">${formattedDate}</span>
+                            </div>
+                            <span class="badge bg-warning text-dark px-2 py-1 fs-8 font-monospace font-weight-bold"><i class="far fa-clock mr-1"></i>${formattedTime}</span>
+                        </div>
+                        <div class="text-white-50 fs-8" style="font-size: 13px;">${item.description || 'Tidak ada deskripsi.'}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        grid.innerHTML = html;
+    }
+
     // 6. Polling Data Fetcher
     function fetchMonitorData() {
         $.ajax({
@@ -785,6 +898,7 @@ $(document).ready(function() {
                 const filtered = applyFilter(data);
                 latestFilteredList = filtered;
                 updateMonitorGrid(filtered, false);
+                updateTitipanPanel(data.titipan_orders);
 
                 // Save full CC list for accurate voice-announcement comparisons next poll
                 if (data && Array.isArray(data.all_cc)) {
@@ -808,7 +922,7 @@ $(document).ready(function() {
 
                         if (elapsedSinceFirst >= WARNING_INTERVAL_MS && elapsedSinceLastWarning >= WARNING_INTERVAL_MS) {
                             lastWarningAt = now;
-                            speakAnnouncement(`Peringatan! ${currentFirst.name} sudah berada di antrian pertama lebih dari 5 menit dan belum mengambil orderan. Segera terima order!`);
+                            speakAnnouncement(`Antrian selanjutnya ${currentFirst.name} harap bersiap menerima order ERA`);
                         }
                     }
                 }
