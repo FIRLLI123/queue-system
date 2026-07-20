@@ -19,6 +19,7 @@ class TitipanOrder extends Model
         'status', // 'CREATE' or 'COMPLETED'
         'taken_by_user_id',
         'taken_at',
+        'created_by_user_id',
     ];
 
     protected $casts = [
@@ -30,4 +31,10 @@ class TitipanOrder extends Model
     {
         return $this->belongsTo(User::class, 'taken_by_user_id');
     }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
 }
+

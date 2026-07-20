@@ -51,9 +51,14 @@ class WebReportController extends Controller
         }
 
         if ($typeFilter) {
-            $typeId = OrderType::where('name', $typeFilter)->value('id');
-            if ($typeId) {
-                $query->where('order_type_id', $typeId);
+            if ($typeFilter === 'OTHER') {
+                $otherTypeIds = OrderType::whereNotIn('name', ['CRM', 'CMS', 'TITIPAN'])->pluck('id');
+                $query->whereIn('order_type_id', $otherTypeIds);
+            } else {
+                $typeId = OrderType::where('name', $typeFilter)->value('id');
+                if ($typeId) {
+                    $query->where('order_type_id', $typeId);
+                }
             }
         }
 
@@ -67,8 +72,9 @@ class WebReportController extends Controller
         // ── Aggregate: per-user totals ─────────────────────────────────────
         $userTotals = [];
         foreach ($rows as $row) {
-            $uid  = $row->user_id;
-            $type = $orderTypes[$row->order_type_id] ?? 'OTHER';
+            $uid     = $row->user_id;
+            $rawType = $orderTypes[$row->order_type_id] ?? 'OTHER';
+            $type    = in_array($rawType, ['CRM', 'CMS', 'TITIPAN']) ? $rawType : 'OTHER';
             if (!isset($userTotals[$uid])) {
                 $userTotals[$uid] = [
                     'user_id'  => $uid,
@@ -81,7 +87,7 @@ class WebReportController extends Controller
                     'TOTAL'    => 0,
                 ];
             }
-            $userTotals[$uid][$type]  += $row->total;
+            $userTotals[$uid][$type]   += $row->total;
             $userTotals[$uid]['TOTAL'] += $row->total;
         }
         usort($userTotals, fn($a, $b) => $b['TOTAL'] <=> $a['TOTAL']);
@@ -89,12 +95,13 @@ class WebReportController extends Controller
         // ── Aggregate: per-date totals (for line chart) ────────────────────
         $dateTotals = [];
         foreach ($rows as $row) {
-            $d    = $row->order_date;
-            $type = $orderTypes[$row->order_type_id] ?? 'OTHER';
+            $d       = $row->order_date;
+            $rawType = $orderTypes[$row->order_type_id] ?? 'OTHER';
+            $type    = in_array($rawType, ['CRM', 'CMS', 'TITIPAN']) ? $rawType : 'OTHER';
             if (!isset($dateTotals[$d])) {
                 $dateTotals[$d] = ['date' => $d, 'CRM' => 0, 'CMS' => 0, 'OTHER' => 0, 'TITIPAN' => 0, 'TOTAL' => 0];
             }
-            $dateTotals[$d][$type]  += $row->total;
+            $dateTotals[$d][$type]   += $row->total;
             $dateTotals[$d]['TOTAL'] += $row->total;
         }
         ksort($dateTotals);
@@ -102,10 +109,11 @@ class WebReportController extends Controller
         // ── Per-user per-date table (for the detailed table) ───────────────
         $tableRows = [];
         foreach ($rows as $row) {
-            $uid  = $row->user_id;
-            $d    = $row->order_date;
-            $type = $orderTypes[$row->order_type_id] ?? 'OTHER';
-            $key  = "{$uid}_{$d}";
+            $uid     = $row->user_id;
+            $d       = $row->order_date;
+            $rawType = $orderTypes[$row->order_type_id] ?? 'OTHER';
+            $type    = in_array($rawType, ['CRM', 'CMS', 'TITIPAN']) ? $rawType : 'OTHER';
+            $key     = "{$uid}_{$d}";
             if (!isset($tableRows[$key])) {
                 $tableRows[$key] = [
                     'user_id'    => $uid,
@@ -119,7 +127,7 @@ class WebReportController extends Controller
                     'TOTAL'      => 0,
                 ];
             }
-            $tableRows[$key][$type]  += $row->total;
+            $tableRows[$key][$type]   += $row->total;
             $tableRows[$key]['TOTAL'] += $row->total;
         }
         usort($tableRows, fn($a, $b) => strcmp($a['order_date'], $b['order_date']) ?: strcmp($a['name'], $b['name']));
@@ -167,8 +175,13 @@ class WebReportController extends Controller
             $query->where('user_id', $userId);
         }
         if ($typeFilter) {
-            $typeId = OrderType::where('name', $typeFilter)->value('id');
-            if ($typeId) $query->where('order_type_id', $typeId);
+            if ($typeFilter === 'OTHER') {
+                $otherTypeIds = OrderType::whereNotIn('name', ['CRM', 'CMS', 'TITIPAN'])->pluck('id');
+                $query->whereIn('order_type_id', $otherTypeIds);
+            } else {
+                $typeId = OrderType::where('name', $typeFilter)->value('id');
+                if ($typeId) $query->where('order_type_id', $typeId);
+            }
         }
 
         $rows = $query->get();
@@ -176,23 +189,24 @@ class WebReportController extends Controller
         // Build per-user-per-date structure
         $tableRows = [];
         foreach ($rows as $row) {
-            $uid  = $row->user_id;
-            $d    = $row->order_date;
-            $type = $orderTypes[$row->order_type_id] ?? 'OTHER';
-            $key  = "{$uid}_{$d}";
+            $uid     = $row->user_id;
+            $d       = $row->order_date;
+            $rawType = $orderTypes[$row->order_type_id] ?? 'OTHER';
+            $type    = in_array($rawType, ['CRM', 'CMS', 'TITIPAN']) ? $rawType : 'OTHER';
+            $key     = "{$uid}_{$d}";
             if (!isset($tableRows[$key])) {
                 $tableRows[$key] = [
-                    'Tanggal' => $d,
-                    'Nama'    => optional($row->user)->name ?? '–',
-                    'Username'=> optional($row->user)->username ?? '–',
-                    'CRM'     => 0,
-                    'CMS'     => 0,
-                    'OTHER'   => 0,
-                    'TITIPAN' => 0,
-                    'TOTAL'   => 0,
+                    'Tanggal'  => $d,
+                    'Nama'     => optional($row->user)->name ?? '–',
+                    'Username' => optional($row->user)->username ?? '–',
+                    'CRM'      => 0,
+                    'CMS'      => 0,
+                    'OTHER'    => 0,
+                    'TITIPAN'  => 0,
+                    'TOTAL'    => 0,
                 ];
             }
-            $tableRows[$key][$type]  += $row->total;
+            $tableRows[$key][$type]   += $row->total;
             $tableRows[$key]['TOTAL'] += $row->total;
         }
         usort($tableRows, fn($a, $b) => strcmp($a['Tanggal'], $b['Tanggal']) ?: strcmp($a['Nama'], $b['Nama']));

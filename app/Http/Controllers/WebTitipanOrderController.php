@@ -34,7 +34,7 @@ class WebTitipanOrderController extends Controller
 
     public function list()
     {
-        $orders = TitipanOrder::with('takenBy')->orderBy('created_at', 'desc')->get();
+        $orders = TitipanOrder::with(['takenBy', 'creator'])->orderBy('created_at', 'desc')->get();
         return response()->json(['titipan_orders' => $orders]);
     }
 
@@ -54,12 +54,13 @@ class WebTitipanOrderController extends Controller
             'requirement' => $request->input('requirement'),
             'description' => $request->input('description'),
             'status' => 'CREATE',
+            'created_by_user_id' => $request->user()->id,
         ]);
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'CREATE_TITIPAN',
-            'description' => sprintf('Admin created titipan order: %s at %s %s.', $order->requirement, $order->booking_date->toDateString(), $order->booking_time),
+            'description' => sprintf('%s created titipan order: %s at %s %s.', $request->user()->username, $order->requirement, $order->booking_date->toDateString(), $order->booking_time),
         ]);
 
         return response()->json(['titipan_order' => $order], 201);
@@ -89,7 +90,7 @@ class WebTitipanOrderController extends Controller
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'UPDATE_TITIPAN',
-            'description' => sprintf('Admin updated titipan order #%s.', $order->id),
+            'description' => sprintf('%s updated titipan order #%s.', $request->user()->username, $order->id),
         ]);
 
         return response()->json(['titipan_order' => $order]);
@@ -98,12 +99,24 @@ class WebTitipanOrderController extends Controller
     public function destroy(Request $request, $id)
     {
         $order = TitipanOrder::findOrFail($id);
+
+        // Validation for order status: cannot delete if status is COMPLETED
+        if ($order->status === 'COMPLETED') {
+            return response()->json(['message' => 'Tidak dapat menghapus order titipan yang sudah complete.'], 403);
+        }
+
+        // Validation for user role:
+        // CC: only delete own orders
+        if ($request->user()->role === 'CC' && $order->created_by_user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Anda hanya diperbolehkan menghapus order titipan buatan Anda sendiri.'], 403);
+        }
+
         $order->delete();
 
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'action' => 'DELETE_TITIPAN',
-            'description' => sprintf('Admin deleted titipan order #%s.', $id),
+            'description' => sprintf('%s deleted titipan order #%s.', $request->user()->username, $id),
         ]);
 
         return response()->json(['message' => 'Titipan order deleted successfully.']);

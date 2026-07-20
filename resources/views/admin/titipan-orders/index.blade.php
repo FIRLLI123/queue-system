@@ -25,6 +25,7 @@
                         <th>Kebutuhan</th>
                         <th>Deskripsi</th>
                         <th>Status</th>
+                        <th>Dibuat Oleh</th>
                         <th>Diambil Oleh</th>
                         <th style="width: 150px;" class="text-center">Aksi</th>
                     </tr>
@@ -32,12 +33,13 @@
                 <tbody id="titipan-list-body">
                     <!-- Loaded dynamically via AJAX -->
                     <tr>
-                        <td colspan="8" class="text-center py-5">
+                        <td colspan="9" class="text-center py-5">
                             <div class="spinner-border text-primary spinner-border-sm mr-2" role="status"></div>
                             <span>Memuat data titipan order...</span>
                         </td>
                     </tr>
                 </tbody>
+
             </table>
         </div>
     </div>
@@ -163,11 +165,15 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    const currentUserId = {{ auth()->user()->id }};
+    const userRole = '{{ auth()->user()->role }}';
+
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
+
 
     loadTitipanOrders();
 
@@ -202,14 +208,14 @@ $(document).ready(function() {
     function loadTitipanOrders() {
         const tbody = $('#titipan-list-body');
         $.ajax({
-            url: '/admin/titipan-orders/data',
+            url: '/titipan-orders/data',
             method: 'GET',
             success: function(response) {
                 const orders = response.titipan_orders;
                 if (!orders || orders.length === 0) {
                     tbody.html(`
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
+                            <td colspan="9" class="text-center py-5 text-muted">
                                 <i class="fas fa-clipboard-list fa-2x mb-3 text-gray-300 d-block"></i>
                                 Belum ada data titipan order.
                             </td>
@@ -246,13 +252,21 @@ $(document).ready(function() {
                     const desc = o.description ? o.description : '<span class="text-muted italic">–</span>';
 
                     // action buttons
-                    const actionBtn = `
-                        <div class="d-flex justify-content-center gap-2" style="gap: 6px;">
-                            <button class="btn btn-sm btn-light text-danger rounded-circle delete-btn" data-id="${o.id}" title="Hapus">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
+                    let actionBtn = '<span class="text-muted">–</span>';
+                    const canDelete = o.status !== 'COMPLETED' && (userRole === 'ADMIN' || parseInt(o.created_by_user_id) === currentUserId);
+                    if (canDelete) {
+                        actionBtn = `
+                            <div class="d-flex justify-content-center gap-2" style="gap: 6px;">
+                                <button class="btn btn-sm btn-light text-danger rounded-circle delete-btn" data-id="${o.id}" title="Hapus">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    }
+
+
+                    // creator
+                    const creatorName = o.creator ? o.creator.name : '<span class="text-muted italic">–</span>';
 
                     html += `
                         <tr>
@@ -262,6 +276,7 @@ $(document).ready(function() {
                             <td><span class="badge bg-light text-purple px-2 py-1.5 border font-weight-bold">${o.requirement}</span></td>
                             <td><div class="text-truncate" style="max-width: 250px;" title="${o.description || ''}">${desc}</div></td>
                             <td>${statusBadge}</td>
+                            <td><span class="font-weight-bold text-gray-800">${creatorName}</span></td>
                             <td>${takenInfo}</td>
                             <td class="text-center">${actionBtn}</td>
                         </tr>
@@ -272,7 +287,7 @@ $(document).ready(function() {
             error: function() {
                 tbody.html(`
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-danger">
+                        <td colspan="9" class="text-center py-5 text-danger">
                             <i class="fas fa-exclamation-triangle fa-2x mb-3 d-block"></i>
                             Gagal memuat data titipan order. Silakan coba lagi.
                         </td>
@@ -292,7 +307,7 @@ $(document).ready(function() {
         form.find('.invalid-feedback').text('');
 
         $.ajax({
-            url: '/admin/titipan-orders',
+            url: '/titipan-orders',
             method: 'POST',
             data: form.serialize(),
             success: function(response) {
@@ -336,7 +351,7 @@ $(document).ready(function() {
         form.find('.invalid-feedback').text('');
 
         $.ajax({
-            url: `/admin/titipan-orders/${id}`,
+            url: `/titipan-orders/${id}`,
             method: 'GET',
             success: function(response) {
                 const o = response.titipan_order;
@@ -371,7 +386,7 @@ $(document).ready(function() {
         form.find('.invalid-feedback').text('');
 
         $.ajax({
-            url: `/admin/titipan-orders/${id}`,
+            url: `/titipan-orders/${id}`,
             method: 'PUT',
             data: form.serialize(),
             success: function(response) {
@@ -420,7 +435,7 @@ $(document).ready(function() {
         btn.prop('disabled', true).text('Menghapus...');
 
         $.ajax({
-            url: `/admin/titipan-orders/${id}`,
+            url: `/titipan-orders/${id}`,
             method: 'DELETE',
             success: function(response) {
                 $('#deleteTitipanModal').modal('hide');

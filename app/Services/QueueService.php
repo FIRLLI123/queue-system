@@ -529,6 +529,23 @@ class QueueService
     public function moveOfflineUsersToEnd(): void
     {
         DB::transaction(function () {
+            // First: Check if any user in BREAK queue is offline/logged out.
+            // If offline, cancel break status and return them to ACTIVE queue.
+            $breakPositions = QueuePosition::break()->with('user')->get();
+            $hasOfflineBreak = false;
+            foreach ($breakPositions as $bPos) {
+                if (!$bPos->user || !$bPos->user->isOnline()) {
+                    $maxActive = QueuePosition::active()->max('queue_number') ?? 0;
+                    $bPos->status = 'ACTIVE';
+                    $bPos->queue_number = $maxActive + 1000;
+                    $bPos->save();
+                    $hasOfflineBreak = true;
+                }
+            }
+            if ($hasOfflineBreak) {
+                $this->normalizeQueueNumbers('BREAK');
+            }
+
             $queue = QueuePosition::active()->with('user')->orderBy('queue_number')->get();
 
             if ($queue->isEmpty()) return;
@@ -569,12 +586,18 @@ class QueueService
     public function moveUserToQueueEnd(User $user): void
     {
         DB::transaction(function () use ($user) {
+            $userPos = QueuePosition::where('user_id', $user->id)->first();
+            if (!$userPos) return;
+
+            // If user was on BREAK, restore status to ACTIVE first
+            if ($userPos->status === 'BREAK') {
+                $userPos->status = 'ACTIVE';
+                $userPos->save();
+                $this->normalizeQueueNumbers('BREAK');
+            }
+
             $queue = QueuePosition::active()->orderBy('queue_number')->get();
-
             if ($queue->isEmpty()) return;
-
-            $userPosition = $queue->firstWhere('user_id', $user->id);
-            if (!$userPosition) return;
 
             // Build new order: all other users first, then this user last
             $otherIds = $queue->where('user_id', '!=', $user->id)->pluck('user_id')->toArray();

@@ -49,7 +49,7 @@
                 <div class="modal-body py-3">
                     <div class="form-group mb-0">
                         <label class="text-dark font-weight-bold fs-8">Nama Kebutuhan</label>
-                        <input type="text" name="name" class="form-control rounded-pill px-3" placeholder="Contoh: Perpanjangan Domain" required>
+                        <input type="text" name="name" class="form-control rounded-pill px-3" placeholder="Contoh: Pemesanan 100 items" required>
                         <div class="invalid-feedback px-2"></div>
                     </div>
                 </div>
@@ -116,7 +116,7 @@ $(document).ready(function() {
 
     function loadRequirements() {
         $.ajax({
-            url: '/admin/titipan-requirements/data',
+            url: '/titipan-requirements-manage/data',
             method: 'GET',
             success: function(data) {
                 const tbody = $('#requirements-list-body');
@@ -154,7 +154,7 @@ $(document).ready(function() {
         btn.prop('disabled', true).text('Menyimpan...');
         $(this).find('.form-control').removeClass('is-invalid');
         $.ajax({
-            url: '/admin/titipan-requirements',
+            url: '/titipan-requirements-manage',
             method: 'POST',
             data: $(this).serialize(),
             success: function() {
@@ -195,7 +195,7 @@ $(document).ready(function() {
         btn.prop('disabled', true).text('Menyimpan...');
         $(this).find('.form-control').removeClass('is-invalid');
         $.ajax({
-            url: `/admin/titipan-requirements/${id}`,
+            url: `/titipan-requirements-manage/${id}`,
             method: 'PUT',
             data: $(this).serialize(),
             success: function() {
@@ -231,7 +231,7 @@ $(document).ready(function() {
         const btn = $(this);
         btn.prop('disabled', true).text('Menghapus...');
         $.ajax({
-            url: `/admin/titipan-requirements/${id}`,
+            url: `/titipan-requirements-manage/${id}`,
             method: 'DELETE',
             success: function() {
                 $('#deleteRequirementModal').modal('hide');

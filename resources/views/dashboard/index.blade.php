@@ -853,6 +853,8 @@
                         const ORDER_MAPPING = { 'CRM': 0, 'CMS': 1, 'OTHER': 2 };
                         data.order_types.sort((a, b) => (ORDER_MAPPING[a.name] ?? 99) - (ORDER_MAPPING[b.name] ?? 99));
                         data.order_types.forEach(type => {
+                            if (type.name === 'BOOKING') return;
+
                             let iconHtml = '<i class="fas fa-phone" style="font-size: 24px; color: #2563eb;"></i>';
                             let desc = 'Telepon CRM';
                             if (type.name === 'CMS') {

@@ -60,22 +60,37 @@
                         <span>Kelola Tipe Order</span>
                     </a>
                 </li>
+            @endif
 
-                <!-- Menu 3.5: Kelola Titipan Order -->
-                <li class="nav-item {{ Request::is('admin/titipan-orders*') ? 'active' : '' }}">
-                    <a class="nav-link" href="{{ url('/admin/titipan-orders') }}">
-                        <i class="fas fa-fw fa-clipboard-list"></i>
-                        <span>Kelola Titipan Order</span>
-                    </a>
-                </li>
+            <!-- Menu Titipan Order (Untuk CC & ADMIN) -->
+            <hr class="sidebar-divider">
+            <div class="sidebar-heading">
+                Titipan Order
+            </div>
 
-                <!-- Menu 3.6: Kelola Kebutuhan Titipan -->
-                <li class="nav-item {{ Request::is('admin/titipan-requirements*') ? 'active' : '' }}">
-                    <a class="nav-link" href="{{ url('/admin/titipan-requirements') }}">
-                        <i class="fas fa-fw fa-tasks"></i>
-                        <span>Kebutuhan Titipan</span>
-                    </a>
-                </li>
+            <!-- Menu 3.5: Kelola Titipan Order -->
+            <li class="nav-item {{ Request::is('titipan-orders*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ url('/titipan-orders') }}">
+                    <i class="fas fa-fw fa-clipboard-list"></i>
+                    <span>Kelola Titipan Order</span>
+                </a>
+            </li>
+
+            <!-- Menu 3.6: Kelola Kebutuhan Titipan -->
+            <li class="nav-item {{ Request::is('titipan-requirements-manage*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ url('/titipan-requirements-manage') }}">
+                    <i class="fas fa-fw fa-tasks"></i>
+                    <span>Kebutuhan Titipan</span>
+                </a>
+            </li>
+
+
+            <!-- Menu Admin Khusus Monitoring (Hanya untuk ADMIN) -->
+            @if(auth()->user()->isAdmin())
+                <hr class="sidebar-divider">
+                <div class="sidebar-heading">
+                    Monitoring & Laporan
+                </div>
 
                 <!-- Menu 4: Screen Monitoring -->
                 <li class="nav-item {{ Request::is('admin/screen*') ? 'active' : '' }}">

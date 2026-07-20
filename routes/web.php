@@ -45,6 +45,23 @@ Route::middleware('auth')->group(function () {
     // Titipan requirements — read-only for everyone authenticated (needed for dropdown)
     Route::get('/titipan-requirements', [WebTitipanRequirementController::class, 'list'])->name('titipan-requirements.list');
 
+    // Titipan Orders CRUD — Accessible to all authenticated users (ADMIN & CC)
+    Route::get('/titipan-orders', [WebTitipanOrderController::class, 'index'])->name('admin.titipan-orders');
+    Route::get('/titipan-orders/data', [WebTitipanOrderController::class, 'list']);
+    Route::post('/titipan-orders', [WebTitipanOrderController::class, 'store']);
+    Route::get('/titipan-orders/{id}', [WebTitipanOrderController::class, 'show']);
+    Route::put('/titipan-orders/{id}', [WebTitipanOrderController::class, 'update']);
+    Route::delete('/titipan-orders/{id}', [WebTitipanOrderController::class, 'destroy']);
+
+    // Titipan Requirements CRUD — Accessible to all authenticated users (ADMIN & CC)
+    Route::get('/titipan-requirements-manage', [WebTitipanRequirementController::class, 'index'])->name('admin.titipan-requirements');
+    Route::get('/titipan-requirements-manage/data', [WebTitipanRequirementController::class, 'list']);
+    Route::post('/titipan-requirements-manage', [WebTitipanRequirementController::class, 'store']);
+    Route::get('/titipan-requirements-manage/{id}', [WebTitipanRequirementController::class, 'show']);
+    Route::put('/titipan-requirements-manage/{id}', [WebTitipanRequirementController::class, 'update']);
+    Route::delete('/titipan-requirements-manage/{id}', [WebTitipanRequirementController::class, 'destroy']);
+
+
     // Chat routes
     Route::post('/chats/send', [WebChatController::class, 'send']);
     Route::post('/chats/read', [WebChatController::class, 'markAsRead']);
@@ -77,22 +94,6 @@ Route::middleware(['auth', 'role:ADMIN'])->group(function () {
     Route::get('/admin/order-types/{id}', [WebOrderTypeController::class, 'show']);
     Route::put('/admin/order-types/{id}', [WebOrderTypeController::class, 'update']);
     Route::delete('/admin/order-types/{id}', [WebOrderTypeController::class, 'destroy']);
-
-    // Titipan Orders CRUD — Admin only
-    Route::get('/admin/titipan-orders', [WebTitipanOrderController::class, 'index'])->name('admin.titipan-orders');
-    Route::get('/admin/titipan-orders/data', [WebTitipanOrderController::class, 'list']);
-    Route::post('/admin/titipan-orders', [WebTitipanOrderController::class, 'store']);
-    Route::get('/admin/titipan-orders/{id}', [WebTitipanOrderController::class, 'show']);
-    Route::put('/admin/titipan-orders/{id}', [WebTitipanOrderController::class, 'update']);
-    Route::delete('/admin/titipan-orders/{id}', [WebTitipanOrderController::class, 'destroy']);
-
-    // Titipan Requirements CRUD — Admin only (manage the requirement options)
-    Route::get('/admin/titipan-requirements', [WebTitipanRequirementController::class, 'index'])->name('admin.titipan-requirements');
-    Route::get('/admin/titipan-requirements/data', [WebTitipanRequirementController::class, 'list']);
-    Route::post('/admin/titipan-requirements', [WebTitipanRequirementController::class, 'store']);
-    Route::get('/admin/titipan-requirements/{id}', [WebTitipanRequirementController::class, 'show']);
-    Route::put('/admin/titipan-requirements/{id}', [WebTitipanRequirementController::class, 'update']);
-    Route::delete('/admin/titipan-requirements/{id}', [WebTitipanRequirementController::class, 'destroy']);
 
     // Screen Monitoring
     Route::get('/admin/screen', [WebDashboardController::class, 'adminScreen'])->name('admin.screen');
