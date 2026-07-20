@@ -532,17 +532,15 @@ class QueueService
             // First: Check if any user in BREAK queue is offline/logged out.
             // If offline, cancel break status and return them to ACTIVE queue.
             $breakPositions = QueuePosition::break()->with('user')->get();
-            $hasOfflineBreak = false;
-            foreach ($breakPositions as $bPos) {
-                if (!$bPos->user || !$bPos->user->isOnline()) {
-                    $maxActive = QueuePosition::active()->max('queue_number') ?? 0;
+            $offlineBreaks  = $breakPositions->filter(fn($pos) => !$pos->user || !$pos->user->isOnline());
+
+            if ($offlineBreaks->isNotEmpty()) {
+                $maxActive = QueuePosition::active()->max('queue_number') ?? 0;
+                foreach ($offlineBreaks->values() as $i => $bPos) {
                     $bPos->status = 'ACTIVE';
-                    $bPos->queue_number = $maxActive + 1000;
+                    $bPos->queue_number = $maxActive + 5000 + $i;
                     $bPos->save();
-                    $hasOfflineBreak = true;
                 }
-            }
-            if ($hasOfflineBreak) {
                 $this->normalizeQueueNumbers('BREAK');
             }
 
@@ -569,7 +567,7 @@ class QueueService
 
             // Apply with temp offsets to avoid unique constraint violations
             foreach ($reordered as $index => $pos) {
-                $pos->queue_number = ($index + 1) + 1000;
+                $pos->queue_number = ($index + 1) + 2000;
                 $pos->save();
             }
             foreach ($reordered as $index => $pos) {
@@ -591,7 +589,9 @@ class QueueService
 
             // If user was on BREAK, restore status to ACTIVE first
             if ($userPos->status === 'BREAK') {
+                $maxActive = QueuePosition::active()->max('queue_number') ?? 0;
                 $userPos->status = 'ACTIVE';
+                $userPos->queue_number = $maxActive + 5000;
                 $userPos->save();
                 $this->normalizeQueueNumbers('BREAK');
             }
@@ -607,7 +607,7 @@ class QueueService
             foreach ($reordered as $index => $userId) {
                 $pos = $queue->firstWhere('user_id', $userId);
                 if ($pos) {
-                    $pos->queue_number = ($index + 1) + 1000;
+                    $pos->queue_number = ($index + 1) + 2000;
                     $pos->save();
                 }
             }
